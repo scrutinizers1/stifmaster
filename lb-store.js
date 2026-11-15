@@ -31,7 +31,7 @@
     : null;
 
   function emptyDB() {
-    return { users: {}, apps: [], docs: {}, invoices: [], settings: {},
+    return { users: {}, apps: [], docs: {}, photos: {}, invoices: [], settings: {},
              messages: [], outbox: [], read: {}, profiles: [] };
   }
 
@@ -116,6 +116,7 @@
         address: a.address || {}, emergency: a.emergency || {},
         status: a.status, submittedAt: a.submitted_at, reviewedAt: a.reviewed_at,
         reviewNote: a.review_note || '', appeal: a.appeal || null, appealStatus: a.appeal_status || 'none',
+        documentsNote: a.documents_note || '',
         children: (a.children || []).map(function (c) {
           return { id: c.id, name: c.name, dob: c.dob, gender: c.gender,
                    program: c.program, medical: c.medical, studentNo: c.student_no };
@@ -126,8 +127,9 @@
     });
 
     var childOwner = {};
+    var childById = {};
     appsArr.forEach(function (a) {
-      a.children.forEach(function (c) { childOwner[c.id] = a; });
+      a.children.forEach(function (c) { childOwner[c.id] = a; childById[c.id] = { child: c, app: a }; });
     });
 
     /* --- invoices + payments --- */
@@ -148,7 +150,11 @@
     var msgArr = messages.map(function (m) {
       return { id: m.id, title: m.title, body: m.body, category: m.category,
                audience: m.audience, target: m.target, important: !!m.important,
-               author: m.author, at: m.at };
+               author: m.author, at: m.at,
+               kind: m.kind || 'broadcast', childId: m.child_id || null,
+               childName: m.child_name || '', studentNo: m.student_no || '',
+               recipient: m.recipient || '', greeting: m.greeting || '',
+               channel: m.channel || 'site' };
     });
 
     /* --- read receipts (only mine come back) --- */
@@ -158,7 +164,9 @@
     /* --- outbox --- */
     var outArr = outbox.map(function (e) {
       return { id: e.id, to: e.to_email, subject: e.subject, body: e.body,
-               status: e.status, provider: e.provider, at: e.at };
+               status: e.status, provider: e.provider, at: e.at,
+               channel: e.channel || 'email', kind: e.kind || 'transactional',
+               messageId: e.message_id || null, error: e.error || '' };
     });
 
     /* --- settings (flat) --- */
@@ -173,13 +181,23 @@
         .catch(function () { return null; });
     }));
     var docsByEmail = {};
+    var photosByChild = {};
     docs.forEach(function (d, i) {
+      var rec = { name: d.file_name, type: d.mime, dataUrl: docUrls[i] || '',
+                  at: d.uploaded_at, path: d.file_path, kind: d.kind };
+      if (d.child_id) {
+        (photosByChild[d.child_id] = photosByChild[d.child_id] || []).push(rec);
+        return;
+      }
       var owner = appById[d.application_id];
       if (!owner) return;
       docsByEmail[owner.email] = docsByEmail[owner.email] || {};
-      docsByEmail[owner.email][d.kind] = {
-        name: d.file_name, type: d.mime, dataUrl: docUrls[i] || '', at: d.uploaded_at, path: d.file_path
-      };
+      docsByEmail[owner.email][d.kind] = rec;
+    });
+    Object.keys(photosByChild).forEach(function (k) {
+      photosByChild[k].sort(function (a, b) {
+        return String(a.kind).localeCompare(String(b.kind)) || (new Date(a.at) - new Date(b.at));
+      });
     });
 
     /* --- me --- */
@@ -191,7 +209,7 @@
     }
 
     db = {
-      users: users, apps: appsArr, docs: docsByEmail, invoices: invArr,
+      users: users, apps: appsArr, docs: docsByEmail, photos: photosByChild, invoices: invArr,
       settings: set, messages: msgArr, outbox: outArr, read: read,
       profiles: profiles.map(function (p) {
         return { id: p.id, email: p.email, name: p.name, role: p.role, createdAt: p.created_at };
@@ -285,6 +303,7 @@
       email: state.user.email,
       parent_name: payload.parentName, phone: payload.phone, alt_phone: payload.altPhone,
       relation: payload.relation, address: payload.address, emergency: payload.emergency,
+      documents_note: payload.documentsNote || '',
       status: 'pending'
     }).select('id').single();
     if (ins.error) throw err(ins.error);
@@ -299,25 +318,44 @@
     return appId;
   }
 
-  async function uploadDocument(kind, file) {
+  async function uploadDocument(kind, file, opts) {
     need();
+    opts = opts || {};
     if (!state.user) throw new Error('Please sign in first.');
-    if (!appIdForUser) throw new Error('Please fill in the enrolment form before uploading documents.');
+    var appId = opts.applicationId || appIdForUser;
+    if (!appId) throw new Error('Please fill in the enrolment form before uploading documents.');
+    var childId = opts.childId || null;
     var ext = (file.name.split('.').pop() || 'bin').toLowerCase();
-    var path = state.user.id + '/' + appIdForUser + '/' + kind + '-' + Date.now() + '.' + ext;
+    var path = state.user.id + '/' + appId + '/' +
+               (childId ? 'photo-' + childId + '-' : '') + kind + '-' + Date.now() + '.' + ext;
 
     var up = await sb.storage.from('documents').upload(path, file, { upsert: true, contentType: file.type });
     if (up.error) throw err(up.error);
 
-    var del = await sb.from('documents').delete().eq('application_id', appIdForUser).eq('kind', kind);
-    if (del.error) throw err(del.error);
+    var del = sb.from('documents').delete().eq('application_id', appId).eq('kind', kind);
+    del = childId ? del.eq('child_id', childId) : del.is('child_id', null);
+    var dr = await del;
+    if (dr.error) throw err(dr.error);
 
     var ins = await sb.from('documents').insert({
-      application_id: appIdForUser, kind: kind, file_path: path,
+      application_id: appId, child_id: childId, kind: kind, file_path: path,
       file_name: file.name, mime: file.type
     });
     if (ins.error) throw err(ins.error);
     await load(); notify();
+  }
+
+  /* Upload one of the two child photos shown next to the parent's account.
+     Slot 0 -> 'photo1', slot 1 -> 'photo2', so the two never overwrite each other. */
+  async function uploadChildPhoto(childId, file, slot) {
+    need();
+    var owner = null;
+    db.apps.forEach(function (a) {
+      (a.children || []).forEach(function (c) { if (c.id === childId) owner = a; });
+    });
+    if (!owner) throw new Error('Learner not found.');
+    var kind = 'photo' + ((Number(slot) || 0) + 1);
+    return uploadDocument(kind, file, { applicationId: owner.id, childId: childId });
   }
 
   async function recordPayment(invoiceId, amount, method, plan) {
@@ -411,26 +449,110 @@
     if (r.error) throw err(r.error);
     await load(); notify();
   }
+  /* Real email delivery through the Supabase Edge Function `send-email`
+     (which calls Resend). Every attempt is logged in the outbox as
+     queued -> sent / failed, with the reason kept on the row. */
   async function sendEmail(o) {
     need();
-    var rec = { to_email: o.to, subject: o.subject, body: o.body, status: 'demo', provider: 'demo' };
-    var svc = db.settings.emailjsService, tpl = db.settings.emailjsTemplate, pk = db.settings.emailjsPublicKey;
-    if (svc && tpl && pk) {
-      try {
-        var res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ service_id: svc, template_id: tpl, user_id: pk,
-            template_params: { to_email: o.to, subject: o.subject, message: o.body,
-                               centre: db.settings.centre || 'Light Bearers Child Care Centre' } })
-        });
-        rec.status = res.ok ? 'sent' : 'failed';
-        rec.provider = 'emailjs';
-      } catch (e) { rec.status = 'failed'; rec.provider = 'emailjs'; }
+    var rec = {
+      to_email: o.to, subject: o.subject, body: o.body,
+      status: 'queued', provider: 'resend',
+      channel: o.channel || 'email', kind: o.kind || 'transactional',
+      message_id: o.messageId || null, error: null
+    };
+    var ins = await sb.from('outbox').insert(rec).select('id').single();
+    if (ins.error) throw err(ins.error);
+    var id = ins.data.id;
+
+    var status = 'failed', detail = '';
+    try {
+      var r = await sb.functions.invoke('send-email', {
+        body: {
+          to: o.to, subject: o.subject, body: o.body,
+          from: (db.settings && db.settings.mailFrom) || undefined,
+          replyTo: o.replyTo || undefined
+        }
+      });
+      if (r.error) {
+        detail = r.error.message || String(r.error);
+      } else if (r.data && r.data.error) {
+        detail = r.data.error;
+      } else {
+        status = 'sent';
+      }
+    } catch (e) {
+      detail = e && (e.message || String(e)) || 'send failed';
     }
-    var r = await sb.from('outbox').insert(rec);
+
+    var upd = await sb.from('outbox').update({ status: status, error: detail || null }).eq('id', id);
+    if (upd.error) throw err(upd.error);
+    await load(); notify();
+    return { id: id, status: status, provider: 'resend', detail: detail };
+  }
+
+  /* SMS is only ever sent when it is free of charge. No free gateway is wired
+     up, so we log the attempt as "skipped" and rely on email instead. */
+  async function sendSms(phone, body, kind) {
+    need();
+    if (!db.settings || !db.settings.smsEnabled) return { skipped: true, reason: 'SMS turned off' };
+    var r = await sb.from('outbox').insert({
+      to_email: phone || '', subject: '(SMS)', body: body || '',
+      status: 'skipped', provider: 'none', channel: 'sms', kind: kind || 'direct',
+      error: 'No free SMS gateway configured — sent by email instead.'
+    });
     if (r.error) throw err(r.error);
     await load(); notify();
-    return rec;
+    return { skipped: true, reason: 'no free gateway' };
+  }
+
+  /* Admin -> one parent, about one learner. The greeting, the learner's name and
+     their student number are attached by the database, then we deliver the same
+     text to the parent's email inbox and (optionally) log an SMS attempt. */
+  async function sendDirectMessage(childId, category, title, body, important) {
+    need();
+    var r = await sb.rpc('send_direct_message', {
+      p_child: childId, p_category: category || 'general',
+      p_title: title || '', p_body: body, p_important: !!important
+    });
+    if (r.error) throw err(r.error);
+    var info = r.data || {};
+    await load();
+    var mail = null;
+    if (info.to) {
+      mail = await sendEmail({ to: info.to, subject: info.subject, body: info.body,
+                               kind: 'direct', messageId: info.id });
+    }
+    var sms = await sendSms(info.phone, info.body, 'direct');
+    notify();
+    return { info: info, mail: mail, sms: sms };
+  }
+
+  async function approvedParentContacts() {
+    need();
+    var r = await sb.rpc('approved_parent_contacts');
+    if (r.error) throw err(r.error);
+    return r.data || [];
+  }
+
+  /* Broadcast to every approved parent at once: an on-site notice everyone can
+     read, plus a real email to each parent's inbox. */
+  async function broadcast(o) {
+    need();
+    await publishMessage({
+      title: o.title, body: o.body, category: o.category || 'general',
+      audience: 'all', target: null, important: !!o.important,
+      author: o.author || 'Front office'
+    });
+    var contacts = await approvedParentContacts();
+    var sent = 0, failed = 0, results = [];
+    for (var i = 0; i < contacts.length; i++) {
+      var c = contacts[i];
+      var res = await sendEmail({ to: c.email, subject: o.title, body: o.body, kind: 'broadcast' });
+      if (res.status === 'sent') sent++; else failed++;
+      results.push({ email: c.email, status: res.status, detail: res.detail });
+      if (c.phone) { try { await sendSms(c.phone, o.body, 'broadcast'); } catch (e) {} }
+    }
+    return { recipients: contacts.length, sent: sent, failed: failed, results: results };
   }
 
   /* -------------------------------------------------- admin demo helpers */
@@ -538,6 +660,7 @@
     sendMagicLink: sendMagicLink,
     submitApplication: submitApplication,
     uploadDocument: uploadDocument,
+    uploadChildPhoto: uploadChildPhoto,
     recordPayment: recordPayment,
     markRead: markRead,
     submitAppeal: submitAppeal,
@@ -551,6 +674,10 @@
     saveSettings: saveSettings,
     setRole: setRole,
     sendEmail: sendEmail,
+    sendSms: sendSms,
+    sendDirectMessage: sendDirectMessage,
+    approvedParentContacts: approvedParentContacts,
+    broadcast: broadcast,
     seedSample: seedSample,
     seedMessages: seedMessages,
     resetAll: resetAll

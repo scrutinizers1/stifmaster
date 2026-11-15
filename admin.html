@@ -248,8 +248,20 @@ function ensureInvoices(app){
 const MSG_CATS = {
   general:{ label:'General', ico:'📢' }, trip:{ label:'Trip / outing', ico:'🚌' },
   food:{ label:'Food / menu', ico:'🍎' }, party:{ label:'Party', ico:'🎉' },
-  farewell:{ label:'Farewell', ico:'👋' }
+  farewell:{ label:'Farewell', ico:'👋' }, payment:{ label:'Fees', ico:'💳' },
+  education:{ label:'Educational', ico:'📚' }, uniform:{ label:'Uniform', ico:'👕' },
+  hygiene:{ label:'Hygiene', ico:'🧼' }, emergency:{ label:'Emergency', ico:'🚑' }
 };
+function catOptions(sel){
+  return Object.entries(MSG_CATS).map(([k,c])=>`<option value="${k}"${k===sel?' selected':''}>${c.ico} ${esc(c.label)}</option>`).join('');
+}
+function photosFor(childId){ return (DB.photos && DB.photos[childId]) || []; }
+function childAvatarHTML(child, size){
+  const p = photosFor(child.id); const s = size||48;
+  return p.length
+    ? `<img class="avatar" src="${esc(p[0].dataUrl)}" alt="" style="object-fit:cover;width:${s}px;height:${s}px">`
+    : `<div class="avatar" style="width:${s}px;height:${s}px">${esc(initials(child.name))}</div>`;
+}
 async function sendEmail(o){
   return LB.sendEmail(o);
 }
@@ -399,7 +411,7 @@ function studentRow(s){
   const prog = PROGRAMS[s.child.program];
   return `
   <div class="stu-row" data-action="open-student" data-id="${esc(s.child.id)}">
-    <div class="avatar">${esc(initials(s.child.name))}</div>
+    ${childAvatarHTML(s.child,48)}
     <div class="info">
       <b>${esc(s.child.name)}</b>
       <span>${esc(prog?prog.label:'')} · Parent: ${esc(s.parent)}</span>
@@ -447,6 +459,8 @@ function appCard(a){
       <div><span>Children</span><b>${a.children.map(c=>esc(c.name)+' ('+esc(PROGRAMS[c.program]?PROGRAMS[c.program].label:c.program)+')'+(c.studentNo?' · '+esc(c.studentNo):'')).join('<br>')}</b></div>
     </div>
     <div class="doc-mini">${docLink('id','Parent ID')}${docLink('address','Proof of address')}</div>
+    ${a.documentsNote ? `<div class="note" style="margin-bottom:16px">📝 <b>Parent note on missing ID / proof:</b> ${esc(a.documentsNote)}</div>` : ''}
+    ${(a.children||[]).some(c=>photosFor(c.id).length) ? `<div class="doc-mini">${(a.children||[]).map(c=>{const p=photosFor(c.id); return p.length?`<a href="${esc(p[0].dataUrl)}" target="_blank" rel="noopener"><img src="${esc(p[0].dataUrl)}" alt=""> ${esc(c.name)} photo (${p.length})</a>`:'';}).join('')}</div>` : ''}
     ${a.status === 'pending' ? `
       <input class="review-note" data-note="${esc(a.id)}" placeholder="Optional reason (shown to the parent if dismissed)">
       <div class="app-acts">
@@ -513,25 +527,35 @@ function viewPayments(){
 /* ---------- messages (announcements) ---------- */
 function viewMessagesAdmin(){
   const msgs = DB.messages.slice().sort((a,b)=> new Date(b.at)-new Date(a.at));
+  const approvedParents = allStudents().filter(s=>s.status==='approved');
   return `
   ${tabsHTML()}
   <div class="row-b" style="justify-content:space-between;margin-bottom:16px">
-    <div><span class="pill"><b></b> Messages</span><h2 style="margin-top:10px;font-size:22px">Announcements</h2>
-    <p style="color:var(--muted);font-size:13.5px;margin-top:4px">Notify parents about trips, food, parties and farewells. They see it instantly in the portal.</p></div>
+    <div><span class="pill"><b></b> Messages</span><h2 style="margin-top:10px;font-size:22px">Announcements &amp; broadcasts</h2>
+    <p style="color:var(--muted);font-size:13.5px;margin-top:4px">Post notices parents see instantly in the portal — and email them at the same time.</p></div>
     <button class="btn ghost sm" data-action="seed-msgs">✨ Load sample announcements</button>
   </div>
+
+  <div class="form-card" style="max-width:820px;margin-bottom:20px;border-color:#cfe0f2">
+    <h3 style="font-family:Nunito;font-size:17px;margin-bottom:4px">📣 Broadcast to all parents</h3>
+    <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px">One click reaches <b>every approved parent</b> — the notice appears in their portal <i>and</i> is emailed to their inbox.${approvedParents.length?' Currently '+approvedParents.length+' approved parent'+(approvedParents.length===1?'':'s')+'.':''}</p>
+    <form data-form="broadcast">
+      <div class="grid2">
+        <label class="f">Category<select name="category">${catOptions('general')}</select></label>
+        <label class="f">Subject<input name="title" required placeholder="e.g. School closes early on Friday"></label>
+        <label class="f full">Message<textarea name="body" required style="min-height:110px;padding:12px 14px;border-radius:11px;border:1px solid var(--line2);font:inherit;font-size:14.5px;width:100%" placeholder="Write your broadcast…"></textarea></label>
+      </div>
+      <label style="display:flex;gap:10px;align-items:center;margin-top:12px;font-size:14px;font-weight:600"><input type="checkbox" name="important" style="width:18px;height:18px;accent-color:var(--primary)"> Mark as important</label>
+      <button class="btn p" style="margin-top:16px" type="submit">📣 Send broadcast to all parents</button>
+    </form>
+  </div>
+
   <div class="form-card" style="max-width:820px;margin-bottom:24px">
-    <h3 style="font-family:Nunito;font-size:17px;margin-bottom:14px">New announcement</h3>
+    <h3 style="font-family:Nunito;font-size:17px;margin-bottom:14px">New on-site announcement</h3>
     <form data-form="message">
       <div class="grid2">
         <label class="f">Category
-          <select name="category">
-            <option value="trip">🚌 Trip / outing</option>
-            <option value="food">🍎 Food / menu</option>
-            <option value="party">🎉 Party / birthday</option>
-            <option value="farewell">👋 Farewell</option>
-            <option value="general">📢 General notice</option>
-          </select>
+          <select name="category">${catOptions('trip')}</select>
         </label>
         <label class="f">Send to
           <select name="audience" id="audience">
@@ -545,24 +569,28 @@ function viewMessagesAdmin(){
         <label class="f full">Message<textarea name="body" required style="min-height:110px;padding:12px 14px;border-radius:11px;border:1px solid var(--line2);font:inherit;font-size:14.5px;width:100%" placeholder="Write your notice…"></textarea></label>
       </div>
       <label style="display:flex;gap:10px;align-items:center;margin-top:12px;font-size:14px;font-weight:600"><input type="checkbox" name="important" style="width:18px;height:18px;accent-color:var(--primary)"> Mark as important</label>
-      <button class="btn p" style="margin-top:16px" type="submit">Publish announcement</button>
+      <button class="btn p" style="margin-top:16px" type="submit">Publish on-site only</button>
+      <div class="note">This posts to the portal only. Use <b>Broadcast</b> above to also email every parent, or open a learner to send a personal message.</div>
     </form>
   </div>
-  ${msgs.length ? msgs.map(m => adminMsgCard(m)).join('') : `<div class="empty"><div class="ico">📭</div><b>No announcements yet</b>Publish one above, or load the samples.</div>`}
+  ${msgs.length ? msgs.map(m => adminMsgCard(m)).join('') : `<div class="empty"><div class="ico">📭</div><b>No messages yet</b>Publish one above, or load the samples.</div>`}
   `;
 }
 function adminMsgCard(m){
   const c = MSG_CATS[m.category] || MSG_CATS.general;
-  const aud = m.audience === 'all' ? 'All parents'
+  const direct = m.kind === 'direct';
+  const aud = direct
+    ? ('Personal · ' + (m.childName||'learner') + (m.studentNo ? ' · ' + m.studentNo : ''))
+    : m.audience === 'all' ? 'All parents'
     : m.audience === 'programme' ? (PROGRAMS[m.target] ? PROGRAMS[m.target].label : 'Programme')
     : (function(){ const s = allStudents().find(x => x.child.id === m.target); return s ? s.child.name + (s.studentNo ? ' · ' + s.studentNo : '') : 'Learner'; })();
   return `
   <div class="app-card" style="padding:18px 20px">
     <div class="hd" style="margin-bottom:8px">
-      <h3>${c.ico} ${esc(m.title)}</h3>
+      <h3>${direct?'✉️':c.ico} ${esc(m.title)}</h3>
       ${m.important ? '<span class="tag pending">Important</span>' : ''}
-      <span class="tag plan">${esc(c.label)}</span>
-      <span class="when">${esc(fmtDate(m.at))} · to ${esc(aud)}</span>
+      <span class="tag plan">${esc(direct?'Personal':c.label)}</span>
+      <span class="when">${esc(fmtDate(m.at))} · ${esc(aud)}</span>
       <div class="spacer"></div>
       <button class="btn danger sm" data-action="del-msg" data-id="${esc(m.id)}">Delete</button>
     </div>
@@ -573,24 +601,31 @@ function adminMsgCard(m){
 /* ---------- outbox ---------- */
 function viewOutbox(){
   const out = DB.outbox.slice();
-  const connected = !!(setting('emailjsService') && setting('emailjsTemplate') && setting('emailjsPublicKey'));
+  const sent = out.filter(e=>e.status==='sent').length;
+  const failed = out.filter(e=>e.status==='failed').length;
+  const statusCls = s => s==='sent' ? 'approved' : s==='failed' ? 'rejected' : s==='skipped' ? 'plan' : 'pending';
   return `
   ${tabsHTML()}
   <span class="pill"><b></b> Emails</span>
   <h2 style="margin:10px 0 6px;font-size:22px">Outbox</h2>
-  <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Every automated email the centre sends — approval, dismissal and appeal notices.</p>
-  <div class="note" style="margin-bottom:18px">${connected
-    ? '✅ <b>EmailJS is connected</b> — emails are really being delivered.'
-    : '⚠️ <b>Demo mode:</b> emails are logged here but not delivered. Add your EmailJS service, template and public key in <b>Settings</b> to send them for real.'}</div>
+  <p style="color:var(--muted);font-size:13.5px;margin-bottom:16px">Every message the centre sends — approval, dismissal and appeal notices, personal notes and broadcasts.</p>
+  <div class="note" style="margin-bottom:18px">📮 Emails are delivered by the <b>Supabase Edge Function “send-email”</b> (via Resend). Each attempt is logged below as <b>queued → sent / failed</b>, and any delivery error is kept on the row. Turn SMS on in <b>Settings</b> if you ever get a free gateway — until then SMS attempts are logged as <b>skipped</b> and email is used.</div>
+  ${out.length ? `<div class="grid3" style="margin-bottom:18px">
+      <div class="stat"><div class="ico">📤</div><b>${out.length}</b><span>Messages logged</span></div>
+      <div class="stat"><div class="ico">✅</div><b>${sent}</b><span>Delivered</span></div>
+      <div class="stat"><div class="ico">⚠️</div><b>${failed}</b><span>Failed</span></div>
+    </div>` : ''}
   ${out.length ? out.map(e => `
     <div class="app-card" style="padding:18px 20px">
       <div class="hd" style="margin-bottom:8px">
-        <h3>${esc(e.subject)}</h3>
-        <span class="tag ${e.status==='sent'?'approved':e.status==='failed'?'rejected':'pending'}">${esc(e.status)}</span>
+        <h3>${esc(e.subject || '(no subject)')}</h3>
+        <span class="tag ${statusCls(e.status)}">${esc(e.status)}</span>
+        <span class="tag plan">${esc(e.channel||'email')} · ${esc(e.kind||'')}</span>
         <span class="when">to ${esc(e.to)} · ${esc(fmtDate(e.at))}</span>
       </div>
       <p style="color:#4a5766;font-size:14px;white-space:pre-wrap">${esc(e.body)}</p>
-    </div>`).join('') : `<div class="empty"><div class="ico">📤</div><b>Outbox is empty</b>Approve, dismiss or appeal an application and the email lands here.</div>`}
+      ${e.error ? `<div class="note" style="border:1px solid #f6cfcf;background:#fff5f5;color:#c0392b">⚠️ ${esc(e.error)}</div>` : ''}
+    </div>`).join('') : `<div class="empty"><div class="ico">📤</div><b>Outbox is empty</b>Approve, dismiss or message a parent and the email lands here.</div>`}
   `;
 }
 
@@ -605,12 +640,12 @@ function viewSettings(){
         <label class="f">Once-off registration fee (R)<input type="number" name="registrationFee" min="0" value="${setting('registrationFee')}"></label>
         <label class="f">Days to settle the other half<input type="number" name="planDays" min="1" value="${setting('planDays')}"></label>
         <label class="f full">Yoco public key<input name="yocoPublicKey" placeholder="pk_live_..." value="${esc(setting('yocoPublicKey'))}"></label>
-        <label class="f full">EmailJS service ID <span class="hint" style="display:inline">— to really send approval emails</span><input name="emailjsService" placeholder="service_xxxxxxx" value="${esc(setting('emailjsService'))}"></label>
-        <label class="f">EmailJS template ID<input name="emailjsTemplate" placeholder="template_xxxxxxx" value="${esc(setting('emailjsTemplate'))}"></label>
-        <label class="f">EmailJS public key<input name="emailjsPublicKey" placeholder="AbCdEfGh..." value="${esc(setting('emailjsPublicKey'))}"></label>
+        <label class="f full">Email “from” address <span class="hint" style="display:inline">— must be a verified sender in Resend</span><input name="mailFrom" placeholder="Light Bearers &lt;hello@yourdomain.co.za&gt;" value="${esc(setting('mailFrom'))}"></label>
+        <label class="f full" style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" name="smsEnabled" style="width:18px;height:18px;accent-color:var(--primary)"${setting('smsEnabled')?' checked':''}> Also send SMS to parents <span class="hint" style="display:inline">(only used if a free gateway is configured — otherwise SMS is logged as skipped and email is used)</span></label>
       </div>
       <button class="btn p" style="margin-top:18px" type="submit">Save settings</button>
     </form>
+    <div class="note" style="margin-top:14px">📮 Real email is sent by the Supabase Edge Function <b>“send-email”</b> (via Resend). Set your <span class="mono">RESEND_API_KEY</span> and <span class="mono">MAIL_FROM</span> secrets on that function, and put the same “from” address here.</div>
     <hr class="hr">
     <h3 style="font-family:Nunito;font-size:17px;margin-bottom:6px">Staff access</h3>
     <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Everyone who signs in appears here. Give a colleague the <b>staff</b> role to let them open this console.</p>
@@ -682,6 +717,21 @@ function openStudent(childId){
         <b>${R(i.amount-i.paid)} due</b>
       </div>`).join('') : `<div class="note">No invoices yet.</div>`}
 
+    ${c.studentNo ? `
+    <hr class="hr">
+    <h4 style="font-family:Nunito;font-size:15px;margin-bottom:6px">✉️ Send a personal message</h4>
+    <p style="color:var(--muted);font-size:13px;margin-bottom:12px">Goes straight to <b>${esc(a.parentName)}</b> — it appears in their portal <i>and</i> is emailed to <b>${esc(s.email)}</b>. A greeting, the learner's name and the student number are added automatically.</p>
+    <form data-form="direct">
+      <input type="hidden" name="childId" value="${esc(c.id)}">
+      <div class="grid2">
+        <label class="f">Category<select name="category">${catOptions('general')}</select></label>
+        <label class="f">Subject<input name="title" required placeholder="e.g. Please pack a sun hat on Friday"></label>
+        <label class="f full">Message<textarea name="body" required style="min-height:100px;padding:12px 14px;border-radius:11px;border:1px solid var(--line2);font:inherit;font-size:14.5px;width:100%" placeholder="Write your message…"></textarea></label>
+      </div>
+      <label style="display:flex;gap:10px;align-items:center;margin-top:12px;font-size:14px;font-weight:600"><input type="checkbox" name="important" style="width:18px;height:18px;accent-color:var(--primary)"> Mark as important</label>
+      <button class="btn p" style="margin-top:14px" type="submit">Send to parent (portal + email)</button>
+    </form>` : `<div class="note">A student number is issued when you approve this learner — then you can message the parent directly.</div>`}
+
     <div class="row-b mt">
       ${!c.studentNo ? `<button class="btn p sm" data-action="issue-one" data-id="${esc(c.id)}">Issue student number</button>` : ''}
       <button class="btn ghost sm" data-action="print-student" data-id="${esc(c.id)}">🖨️ Print record</button>
@@ -752,6 +802,30 @@ document.addEventListener('submit', async e => {
     finally{ if(btn) btn.disabled = false; }
     return;
   }
+  if(kind === 'direct'){
+    const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+    try{
+      const res = await LB.sendDirectMessage(f.childId.value, f.category.value, f.title.value.trim(), f.body.value.trim(), f.important.checked);
+      const st = res.mail ? res.mail.status : 'logged';
+      toast('Message delivered to the parent portal' + (st === 'sent' ? ' and email inbox.' : ' (email ' + st + ').'), st === 'failed' ? 'err' : 'ok');
+      applyDB(); closeModal(); render();
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
+    return;
+  }
+  if(kind === 'broadcast'){
+    const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+    try{
+      const res = await LB.broadcast({
+        title: f.title.value.trim(), body: f.body.value.trim(), category: f.category.value,
+        important: f.important.checked, author: 'Front office'
+      });
+      toast('Broadcast posted and emailed to ' + res.sent + ' of ' + res.recipients + ' parent' + (res.recipients === 1 ? '' : 's') + '.' + (res.failed ? ' ' + res.failed + ' failed — see the Outbox.' : ''), res.failed ? '' : 'ok');
+      applyDB(); render();
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
+    return;
+  }
   if(kind === 'settings'){
     const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
     try{
@@ -759,9 +833,8 @@ document.addEventListener('submit', async e => {
         registrationFee: Number(f.registrationFee.value) || 0,
         planDays: Math.max(1, Number(f.planDays.value) || 60),
         yocoPublicKey: f.yocoPublicKey.value.trim(),
-        emailjsService: f.emailjsService.value.trim(),
-        emailjsTemplate: f.emailjsTemplate.value.trim(),
-        emailjsPublicKey: f.emailjsPublicKey.value.trim()
+        mailFrom: f.mailFrom.value.trim(),
+        smsEnabled: !!(f.smsEnabled && f.smsEnabled.checked)
       });
       toast('Settings saved.','ok');
     }catch(err){ toast(err.message,'err'); }

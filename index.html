@@ -193,6 +193,25 @@ legend{font-family:Nunito;font-weight:800;font-size:15px;color:var(--primary-d);
 .stu-meta{display:flex;gap:22px;margin-top:16px;flex-wrap:wrap;position:relative;z-index:2}
 .stu-meta div span{display:block;font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.05em}
 .stu-meta div b{font-size:14.5px;font-weight:700}
+.stu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+.stu-photos{display:flex;gap:14px;margin-top:16px;position:relative;z-index:2;flex-wrap:wrap}
+.pslot{display:flex;flex-direction:column;align-items:center;gap:8px}
+.pslot img{width:74px;height:74px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,.65);box-shadow:0 6px 16px rgba(0,0,0,.18)}
+.pslot .pempty{width:74px;height:74px;border-radius:14px;border:2px dashed rgba(255,255,255,.6);display:grid;place-items:center;font-size:26px;color:rgba(255,255,255,.85)}
+.pslot .btn{background:rgba(255,255,255,.94);color:#22303f;border:0;box-shadow:none}
+.pslot .btn:hover{transform:none;background:#fff}
+.child-av{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:var(--shadow-s);background:var(--grad2);display:grid;place-items:center;color:#7a4400;font-weight:800;font-size:12px;font-family:Nunito}
+.kids-strip{display:flex;align-items:center}
+.kids-strip .child-av{margin-left:-10px}
+.kids-strip .child-av:first-child{margin-left:0}
+.photo-prompt{border:1px solid #f3e2c4;background:linear-gradient(120deg,#fffaf0,#fff);border-radius:var(--r);padding:20px 22px;margin-top:20px;box-shadow:var(--shadow-s)}
+.pp-head{display:flex;gap:14px;align-items:flex-start}
+.pp-ico{font-size:30px;flex:0 0 auto}
+.pp-head h3{font-size:18px}
+.pp-head p{color:var(--muted);font-size:14px;margin-top:3px}
+.msg.direct{border-color:rgba(58,167,224,.42);background:linear-gradient(120deg,#f4fbff,#fff)}
+.msg-cat.personal{background:#e8f2ff;color:#1d6fb8}
+.msg-re{font-size:13px;color:#1d6fb8;background:#e8f2ff;display:inline-block;padding:4px 11px;border-radius:999px;margin-top:8px;font-weight:600}
 
 .inv{padding:20px 22px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-s);margin-bottom:16px}
 .inv-top{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
@@ -378,7 +397,31 @@ function daysLeft(iso){ if(!iso) return null; return Math.ceil((new Date(iso).ge
 function currentUser(){ return (SESSION && SESSION.email && DB.users) ? DB.users[SESSION.email] : null; }
 function initials(n){ return (n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
 function avHTML(u){ return (u && u.picture) ? `<img class="av" src="${esc(u.picture)}" alt="">` : `<span class="av">${esc(initials(u?u.name:'?'))}</span>`; }
-function latestApp(email){ const l = DB.apps.filter(a=>a.email===email); return l.length ? l[l.length-1] : null; }
+function myApps(email){ return DB.apps.filter(a=>a.email===email).sort((a,b)=> new Date(a.submittedAt)-new Date(b.submittedAt)); }
+function latestApp(email){ const l = myApps(email); return l.length ? l[l.length-1] : null; }
+function allChildren(email){ const out=[]; myApps(email).forEach(a=>(a.children||[]).forEach(c=>out.push({child:c,app:a}))); return out; }
+function photosFor(childId){
+  const p = (DB.photos && DB.photos[childId]) || [];
+  return p.slice().sort((a,b)=> String(a.kind).localeCompare(String(b.kind)));
+}
+function childAvatarHTML(child, size){
+  const p = photosFor(child.id); const s = size||32;
+  return p.length
+    ? `<img class="child-av" src="${esc(p[0].dataUrl)}" alt="" style="width:${s}px;height:${s}px">`
+    : `<span class="child-av" style="width:${s}px;height:${s}px;font-size:${Math.round(s*0.36)}px">${esc(initials(child.name))}</span>`;
+}
+function kidsStrip(email){
+  const kids = allChildren(email);
+  if(!kids.length) return '';
+  return `<div class="kids-strip" title="Your children">${kids.map(x=>childAvatarHTML(x.child,32)).join('')}</div>`;
+}
+function approvedChildren(email){ return allChildren(email).filter(x=>x.app.status==='approved'); }
+function dismissedApp(){
+  const u = currentUser(); if(!u) return null;
+  const apps = myApps(u.email);
+  if(apps.some(a=>a.status==='approved')) return null;
+  return apps.find(a=>a.status==='rejected') || null;
+}
 function findByStudentNo(no){
   const q = String(no||'').trim().toUpperCase();
   if(!q) return null;
@@ -392,12 +435,14 @@ function findByStudentNo(no){
 const MSG_CATS = {
   general:{ label:'General', ico:'📢' }, trip:{ label:'Trip / outing', ico:'🚌' },
   food:{ label:'Food / menu', ico:'🍎' }, party:{ label:'Party', ico:'🎉' },
-  farewell:{ label:'Farewell', ico:'👋' }, payment:{ label:'Fees', ico:'💳' }
+  farewell:{ label:'Farewell', ico:'👋' }, payment:{ label:'Fees', ico:'💳' },
+  education:{ label:'Educational', ico:'📚' }, uniform:{ label:'Uniform', ico:'👕' },
+  hygiene:{ label:'Hygiene', ico:'🧼' }, emergency:{ label:'Emergency', ico:'🚑' }
 };
 function msgCat(c){ return MSG_CATS[c] || MSG_CATS.general; }
 function myMessages(email){
-  const app = latestApp(email); if(!app) return [];
-  const kids = app.children || [];
+  const kids = allChildren(email).map(x=>x.child);
+  if(!kids.length) return [];
   const ids = new Set(kids.map(c=>c.id));
   const progs = new Set(kids.map(c=>c.program));
   return DB.messages.filter(m => m.audience==='all' || (m.audience==='programme' && progs.has(m.target)) || (m.audience==='student' && ids.has(m.target)))
@@ -486,10 +531,10 @@ function openSignIn(){
 /* ---------------- invoices ---------------- */
 let _ensured = false;
 function ensureInvoices(email){
-  const app = latestApp(email);
-  if(!app || app.status !== 'approved') return;
+  const approved = myApps(email).filter(a=>a.status==='approved');
+  if(!approved.length) return;
   const period = new Date().toISOString().slice(0,7);
-  const missing = app.children.some(ch => !DB.invoices.some(i => i.email===email && i.childId===ch.id && i.period===period));
+  const missing = approved.some(a => (a.children||[]).some(ch => !DB.invoices.some(i => i.childId===ch.id && i.period===period)));
   if(missing && !_ensured){
     _ensured = true;
     LB.ensureMyInvoices().catch(function(){});
@@ -552,6 +597,16 @@ async function handleUpload(kind, file){
   try{
     await LB.uploadDocument(kind, file);
     toast('Document uploaded.','ok'); render();
+  }catch(e){ toast(e.message,'err'); }
+}
+async function handleChildPhoto(childId, slot, file){
+  if(!file) return;
+  if(file.size > 6*1024*1024) return toast('Photo is too big (max 6 MB).','err');
+  if(!(file.type.indexOf('image/')===0)) return toast('Please upload a JPG or PNG photo.','err');
+  toast('Uploading photo…');
+  try{
+    await LB.uploadChildPhoto(childId, file, slot);
+    toast('Photo saved — thank you!','ok'); render();
   }catch(e){ toast(e.message,'err'); }
 }
 
@@ -705,59 +760,63 @@ function childBlockHTML(i){
 function viewApply(){
   const user = currentUser();
   if(!user) return viewGate('Enrol a child','Sign in with your Google account to fill in the enrolment form.');
-  const app = latestApp(user.email);
-  if(app && app.status === 'rejected') return viewDismissed(app);
-  if(app){
-    return `
-    <section class="section" style="margin-top:8px">
-      <h2>Enrolment</h2>
-      <p class="lead">You already have an application with us.</p>
-      ${statusCard(app)}
-      <div class="row-b mt">
-        <button class="btn p" data-action="go" data-route="documents">Upload / view documents</button>
-        <button class="btn ghost" data-action="go" data-route="dashboard">Go to dashboard</button>
-      </div>
-    </section>`;
-  }
+  const dismissed = dismissedApp();
+  if(dismissed) return viewDismissed(dismissed);
+  const apps = myApps(user.email);
+  const pre = apps.length ? apps[apps.length-1] : null;
+  const addr = (pre && pre.address) || {};
+  const em = (pre && pre.emergency) || {};
+  const rel = (pre && pre.relation) || 'Mother';
+  const prov = addr.province || 'Gauteng';
+  const relOpts = ['Mother','Father','Guardian','Grandparent','Other'].map(o=>`<option${o===rel?' selected':''}>${o}</option>`).join('');
   return `
   <section class="section" style="margin-top:8px">
     <span class="pill"><b></b> Enrolment form</span>
-    <h2 style="margin-top:12px">Enrol your child</h2>
+    <h2 style="margin-top:12px">${apps.length ? 'Enrol another child' : 'Enrol your child'}</h2>
     <p class="lead">Please use your real name and full residential address. We verify every application before approving.</p>
+    ${apps.length ? `<div class="note" style="margin-bottom:16px">You already have ${apps.length} application${apps.length>1?'s':''} with us. This form adds <b>another child</b> — your existing enrolments are not affected, and you can do this any time, even while one child is already enrolled.</div>` : ''}
     <form class="form-card" data-form="apply">
-      <div class="form-head"><div class="ico">👨‍👩‍👧</div><div><h2>Parent / guardian</h2><p>Signed in as ${esc(user.email)}</p></div></div>
+      <div class="form-head"><div class="ico">👨‍👩‍👧</div><div><h2>Parent / guardian</h2><p>Signed in as ${esc(user.email)}${pre?' · details carried over from your last application':''}</p></div></div>
       <div class="grid2">
-        <label class="f">Full name (as on your ID)<input name="parentName" required placeholder="e.g. Thandi Mokoena" value="${esc(user.name||'')}"></label>
-        <label class="f">Mobile number<input name="phone" required placeholder="072 000 0000" inputmode="tel"></label>
-        <label class="f">Alternative number <span class="hint" style="display:inline">(optional)</span><input name="altPhone" placeholder="072 000 0000" inputmode="tel"></label>
-        <label class="f">Relationship to child<select name="relation"><option>Mother</option><option>Father</option><option>Guardian</option><option>Grandparent</option><option>Other</option></select></label>
+        <label class="f">Full name (as on your ID)<input name="parentName" required placeholder="e.g. Thandi Mokoena" value="${esc((pre&&pre.parentName)||user.name||'')}"></label>
+        <label class="f">Mobile number<input name="phone" required placeholder="072 000 0000" inputmode="tel" value="${esc((pre&&pre.phone)||'')}"></label>
+        <label class="f">Alternative number <span class="hint" style="display:inline">(optional)</span><input name="altPhone" placeholder="072 000 0000" inputmode="tel" value="${esc((pre&&pre.altPhone)||'')}"></label>
+        <label class="f">Relationship to child<select name="relation">${relOpts}</select></label>
       </div>
       <fieldset>
         <legend>🏠 Full residential address</legend>
         <div class="grid2">
-          <label class="f full">Street address<input name="line1" required placeholder="12 Acacia Street"></label>
-          <label class="f">Suburb<input name="suburb" required placeholder="Extension 4"></label>
-          <label class="f">City / Town<input name="city" required placeholder="Johannesburg"></label>
-          <label class="f">Province<select name="province" required>${PROVINCES.map(p=>`<option>${p}</option>`).join('')}</select></label>
-          <label class="f">Postal code<input name="postal" required placeholder="2001" inputmode="numeric"></label>
+          <label class="f full">Street address<input name="line1" required placeholder="12 Acacia Street" value="${esc(addr.line1||'')}"></label>
+          <label class="f">Suburb<input name="suburb" required placeholder="Extension 4" value="${esc(addr.suburb||'')}"></label>
+          <label class="f">City / Town<input name="city" required placeholder="Johannesburg" value="${esc(addr.city||'')}"></label>
+          <label class="f">Province<select name="province" required>${PROVINCES.map(p=>`<option${p===prov?' selected':''}>${p}</option>`).join('')}</select></label>
+          <label class="f">Postal code<input name="postal" required placeholder="2001" inputmode="numeric" value="${esc(addr.postal||'')}"></label>
         </div>
       </fieldset>
       <fieldset>
-        <legend>🧒 Children to enrol</legend>
+        <legend>🧒 ${apps.length ? 'Child to enrol' : 'Children to enrol'}</legend>
         <div id="children">${childBlockHTML(1)}</div>
         <button type="button" class="btn ghost sm" data-action="add-child">➕ Add another child</button>
       </fieldset>
       <fieldset>
         <legend>🚑 Emergency contact</legend>
         <div class="grid2">
-          <label class="f">Contact name<input name="emName" required placeholder="e.g. Sipho Dlamini"></label>
-          <label class="f">Contact number<input name="emPhone" required placeholder="072 000 0000" inputmode="tel"></label>
+          <label class="f">Contact name<input name="emName" required placeholder="e.g. Sipho Dlamini" value="${esc(em.name||'')}"></label>
+          <label class="f">Contact number<input name="emPhone" required placeholder="072 000 0000" inputmode="tel" value="${esc(em.phone||'')}"></label>
         </div>
+      </fieldset>
+      <fieldset>
+        <legend>🪪 ID &amp; proof of address</legend>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:14px">After submitting, you can upload a copy of your ID and a proof of address on the <b>Documents</b> page. If you cannot attach them right away — for example foreign documents, or a bill not in your own name — just tell us why below. You can still submit your application, and we will approve it while you sort the paperwork out.</p>
+        <label class="f">Why I can't attach ID / proof of address yet <span class="hint" style="display:inline">(optional)</span>
+          <textarea name="documentsNote" placeholder="e.g. My ID is being renewed — I can bring the original to the office. My proof of address is in my partner's name.">${esc((pre&&pre.documentsNote)||'')}</textarea>
+        </label>
       </fieldset>
       <label class="check mt"><input type="checkbox" name="consent" required><span>I confirm the information is true and correct, and I agree to the centre's rules and to being contacted about this application.</span></label>
       <button class="btn p block" style="margin-top:22px" type="submit">Submit application for approval</button>
-      <div class="note">After submitting, upload a copy of your ID and a proof of address. We approve applications manually — usually within 1–2 working days.</div>
+      <div class="note">We approve applications manually — usually within 1–2 working days. If you skip the ID and proof of address, remember to upload them (or bring them to the office) as soon as you can.</div>
     </form>
+    ${apps.length ? `<h2 style="margin-top:40px;font-size:20px">Your applications</h2>${apps.slice().reverse().map(a=>statusCard(a)).join('')}` : ''}
   </section>`;
 }
 
@@ -788,25 +847,38 @@ function viewDocuments(){
   <section class="section" style="margin-top:8px">
     <span class="pill"><b></b> Documents</span>
     <h2 style="margin-top:12px">ID &amp; proof of address</h2>
-    <p class="lead">We need these to verify every child before their first day. Your files are uploaded securely and only staff can see them.</p>
+    <p class="lead">We need these to verify every child before their first day. Your files are uploaded securely and only staff can see them. You may submit an application without them if you explain why on the enrolment form.</p>
     ${app ? statusCard(app,true) : `<div class="status pending" style="margin-bottom:20px"><div class="ico">📝</div><div><h3>No application yet</h3><p>Please <a href="#apply" data-action="go" data-route="apply" style="color:var(--primary-d);font-weight:700">fill in the enrolment form</a> first, then upload your documents here.</p></div></div>`}
+    ${app && app.documentsNote ? `<div class="note" style="margin-bottom:16px">📝 <b>You told us:</b> “${esc(app.documentsNote)}”</div>` : ''}
     <div class="doc-row mt">${slot('id','Copy of parent / guardian ID','Upload a clear photo of your ID card or smart-card page.')}${slot('address','Proof of address','A recent bill, bank statement or lease (not older than 3 months).')}</div>
+    <div class="note">📸 Photos of your child are added from your <a href="#dashboard" data-action="go" data-route="dashboard" style="color:var(--primary-d);font-weight:700">dashboard</a> — look for the “Add photo” buttons on your child's learner card.</div>
   </section>`;
 }
 
 function studentCardHTML(child, app){
+  const ps = photosFor(child.id);
+  const approved = app.status === 'approved';
+  const slot = (i) => {
+    const d = ps[i];
+    return `<div class="pslot">
+      ${d ? `<img src="${esc(d.dataUrl)}" alt="">` : `<div class="pempty">＋</div>`}
+      <input type="file" id="file-photo-${esc(child.id)}-${i}" accept="image/*" style="display:none">
+      <button type="button" class="btn sm" data-action="pick-photo" data-child="${esc(child.id)}" data-slot="${i}">${d ? 'Replace' : 'Add photo '+(i+1)}</button>
+    </div>`;
+  };
   return `
   <div class="stu-card">
     <div class="stu-top">
-      <span class="mark"><svg viewBox="0 0 24 24" width="22" height="22" fill="none"><circle cx="12" cy="9" r="4" fill="#ffd166"/><path d="M4 20c1.6-4.2 4.7-6.5 8-6.5s6.4 2.3 8 6.5z" fill="#fff"/></svg></span>
+      ${childAvatarHTML(child,44)}
       <div><b>${esc(CONFIG.centre)}</b><span>Learner card · ${new Date().getFullYear()}</span></div>
     </div>
-    <div class="stu-no"><small>Student number</small><b>${esc(child.studentNo || 'Pending')}</b></div>
+    <div class="stu-no"><small>Student number</small><b>${esc(approved ? (child.studentNo || 'Pending') : '—')}</b></div>
     <div class="stu-meta">
       <div><span>Learner</span><b>${esc(child.name)}</b></div>
       <div><span>Programme</span><b>${esc(PROGRAMS[child.program]?PROGRAMS[child.program].label:'')}</b></div>
-      <div><span>Guardian</span><b>${esc(app.parentName)}</b></div>
+      <div><span>Status</span><b>${esc(app.status)}</b></div>
     </div>
+    ${approved ? `<div class="stu-photos no-print">${slot(0)}${slot(1)}</div>` : ''}
   </div>`;
 }
 
@@ -814,36 +886,48 @@ function viewDashboard(){
   const user = currentUser();
   if(!user) return viewGate('My dashboard','Sign in with your Google account to see your enrolment and fees.');
   if(isDismissed()) return viewLocked();
-  const app = latestApp(user.email);
+  const apps = myApps(user.email);
+  const kids = allChildren(user.email);
+  const approvedKids = kids.filter(x=>x.app.status==='approved');
   ensureInvoices(user.email);
   const invoices = myInvoices(user.email);
   const docs = DB.docs[user.email] || {};
   const outstanding = invoices.reduce((s,i)=> s + (i.amount - i.paid), 0);
   const nextDue = invoices.filter(i=>i.plan && i.dueDate).sort((a,b)=> new Date(a.dueDate)-new Date(b.dueDate))[0];
+  const needPhotos = approvedKids.filter(x => photosFor(x.child.id).length < 2);
 
   return `
   <section class="section" style="margin-top:8px">
     <div class="row-b" style="justify-content:space-between">
       <div><span class="pill"><b></b> Parent dashboard</span><h2 style="margin-top:12px">Hello, ${esc((user.name||'there').split(' ')[0])} 👋</h2></div>
-      <div class="row-b no-print">${avHTML(user)}<button class="btn ghost sm" data-action="signout">Sign out</button></div>
+      <div class="row-b no-print">${kidsStrip(user.email)}${avHTML(user)}<button class="btn ghost sm" data-action="signout">Sign out</button></div>
     </div>
 
-    ${app ? statusCard(app) : `
+    ${apps.length ? apps.slice().reverse().map(a=>statusCard(a)).join('') : `
       <div class="status pending" style="margin-top:20px"><div class="ico">📝</div><div><h3>No application yet</h3><p>Start your enrolment and we'll review it within 1–2 working days.</p><button class="btn p sm" style="margin-top:14px" data-action="start-apply">Enrol a child</button></div></div>`}
 
-    ${app && app.status==='approved' ? `
-      <h2 style="margin-top:32px;font-size:22px">Student numbers</h2>
-      <p class="lead">Quote these at the office, on the phone or when paying. Keep them safe.</p>
-      ${app.children.map(c => studentCardHTML(c, app)).join('')}
-      <div class="no-print"><button class="btn ghost sm" onclick="window.print()">🖨️ Print learner card${app.children.length>1?'s':''}</button></div>` : ''}
+    ${needPhotos.length ? `
+    <div class="photo-prompt no-print">
+      <div class="pp-head"><span class="pp-ico">📸</span><div>
+        <h3>Please add 2 photos of ${needPhotos.length>1?'your children':'your child'}</h3>
+        <p>A friendly ask — it helps our carers recognise your little one at a glance. Use the “Add photo” buttons on the learner card${needPhotos.length>1?'s':''} below. You can keep using the whole portal without them.</p>
+      </div></div>
+    </div>` : ''}
+
+    ${kids.length ? `
+      <div class="row-b" style="justify-content:space-between;margin-top:32px">
+        <div><h2 style="font-size:22px">My children</h2><p class="lead" style="margin-bottom:0">${approvedKids.length?'Quote a student number at the office, on the phone or when paying.':'Student numbers are issued once we approve your enrolment.'}</p></div>
+        <div class="row-b no-print"><button class="btn ghost sm" data-action="start-apply">➕ Enrol another child</button><button class="btn ghost sm" onclick="window.print()">🖨️ Print learner card${kids.length>1?'s':''}</button></div>
+      </div>
+      <div class="stu-grid" style="margin-top:14px">${kids.map(x=>studentCardHTML(x.child, x.app)).join('')}</div>` : ''}
 
     <div class="grid3 mt">
-      <div class="card feat"><div class="ico">🧒</div><h3>${app?app.children.length:0} child${app&&app.children.length===1?'':'ren'}</h3><p>${app?esc(app.children.map(c=>c.name).join(', ')):'No children enrolled yet.'}</p></div>
+      <div class="card feat"><div class="ico">🧒</div><h3>${kids.length} child${kids.length===1?'':'ren'}</h3><p>${kids.length?esc(kids.map(x=>x.child.name).join(', ')):'No children enrolled yet.'}</p></div>
       <div class="card feat"><div class="ico">💰</div><h3>${R(outstanding)}</h3><p>Outstanding fees across all invoices.</p></div>
       <div class="card feat"><div class="ico">📎</div><h3>${(docs.id?1:0)+(docs.address?1:0)}/2</h3><p>Documents uploaded. ${(!docs.id||!docs.address)?'Upload your ID and proof of address.':'All documents received.'}</p></div>
     </div>
 
-    ${app && app.status==='approved' ? (()=>{
+    ${approvedKids.length ? (()=>{
       const ms = myMessages(user.email).slice(0,3); const rd = DB.read[user.email] || [];
       if(!ms.length) return '';
       const un = unreadCount(user.email);
@@ -856,7 +940,7 @@ function viewDashboard(){
 
     ${nextDue ? `<div class="due ${daysLeft(nextDue.dueDate)<0?'over':daysLeft(nextDue.dueDate)<=14?'warn':''}" style="margin-top:20px;font-size:14.5px">⏳ You have <b style="margin:0 4px">${Math.max(0,daysLeft(nextDue.dueDate))} day${daysLeft(nextDue.dueDate)===1?'':'s'}</b> left to settle ${R(nextDue.amount-nextDue.paid)} for ${esc(nextDue.childName)} (due ${esc(fmtDate(nextDue.dueDate))}).</div>` : ''}
 
-    ${!app || app.status!=='approved' ? `<div class="card" style="padding:22px;margin-top:20px"><h3 style="font-size:17px">Fees</h3><p style="color:var(--muted);font-size:14.5px;margin-top:6px">Once your application is approved, your monthly invoices will appear here and you'll be able to pay online or set up the half-payment plan.</p></div>` : ''}
+    ${!approvedKids.length ? `<div class="card" style="padding:22px;margin-top:20px"><h3 style="font-size:17px">Fees</h3><p style="color:var(--muted);font-size:14.5px;margin-top:6px">Once your application is approved, your monthly invoices will appear here and you'll be able to pay online or set up the half-payment plan.</p></div>` : ''}
 
     ${invoices.length ? `
       <h2 style="margin-top:36px;font-size:22px">Invoices &amp; payments</h2>
@@ -911,9 +995,7 @@ function invoiceCard(inv){
 }
 
 function isDismissed(){
-  const u = currentUser(); if(!u) return false;
-  const a = latestApp(u.email);
-  return !!(a && a.status === 'rejected');
+  return !!dismissedApp();
 }
 function viewLocked(){
   return `
@@ -963,11 +1045,13 @@ function viewDismissed(app){
 
 function msgCard(m, unread){
   const c = msgCat(m.category);
+  const direct = m.kind === 'direct';
   return `
-  <div class="msg ${unread?'unread':''} ${m.important?'imp':''}">
-    <div class="msg-ico">${c.ico}</div>
+  <div class="msg ${unread?'unread':''} ${m.important?'imp':''} ${direct?'direct':''}">
+    <div class="msg-ico">${direct?'✉️':c.ico}</div>
     <div class="msg-body">
-      <div class="msg-top"><b>${esc(m.title)}</b><span class="msg-cat">${esc(c.label)}</span>${m.important?'<span class="msg-imp">Important</span>':''}${unread?'<span class="msg-new">New</span>':''}</div>
+      <div class="msg-top"><b>${esc(m.title)}</b>${direct?'<span class="msg-cat personal">Personal</span>':`<span class="msg-cat">${esc(c.label)}</span>`}${m.important?'<span class="msg-imp">Important</span>':''}${unread?'<span class="msg-new">New</span>':''}</div>
+      ${direct && m.childName ? `<div class="msg-re">About <b>${esc(m.childName)}</b>${m.studentNo?` · student no. <b>${esc(m.studentNo)}</b>`:''}</div>`:''}
       <p>${esc(m.body).replace(/\n/g,'<br>')}</p>
       <div class="msg-meta">${esc(fmtDate(m.at))}${m.author?' · '+esc(m.author):''}</div>
     </div>
@@ -985,8 +1069,8 @@ function viewMessages(){
     <div class="row-b" style="justify-content:space-between">
       <div>
         <span class="pill"><b></b> Messages</span>
-        <h2 style="margin-top:12px">Notices from Light Bearers</h2>
-        <p class="lead">Trips, menu changes, parties, farewells and everything else you need to know.</p>
+        <h2 style="margin-top:12px">Notices &amp; personal messages</h2>
+        <p class="lead">Trips, menu changes, parties and farewells — plus any personal note the office sends you about your child.</p>
       </div>
       ${unread?`<button class="btn ghost sm" data-action="mark-read">Mark all as read (${unread})</button>`:''}
     </div>
@@ -1018,7 +1102,7 @@ function renderNav(){
 function renderWho(){
   const user = currentUser();
   const who = document.getElementById('who');
-  if(user) who.innerHTML = `${avHTML(user)}<span class="nm">${esc((user.name||'').split(' ')[0]||'Parent')}<span>Parent</span></span><button class="btn ghost sm" data-action="go" data-route="dashboard">Dashboard</button>`;
+  if(user) who.innerHTML = `${kidsStrip(user.email)}${avHTML(user)}<span class="nm">${esc((user.name||'').split(' ')[0]||'Parent')}<span>Parent</span></span><button class="btn ghost sm" data-action="go" data-route="dashboard">Dashboard</button>`;
   else who.innerHTML = `<button class="btn p sm" data-action="signin">Sign in</button>`;
 }
 function showSetup(){
@@ -1049,6 +1133,7 @@ document.addEventListener('click', e => {
     case 'add-child': { const box=document.getElementById('children'); if(!box) break; box.insertAdjacentHTML('beforeend', childBlockHTML(box.querySelectorAll('[data-child]').length+1)); break; }
     case 'remove-child': { const box=document.getElementById('children'); if(box && box.querySelectorAll('[data-child]').length>1) el.closest('[data-child]').remove(); else toast('At least one child is required.'); break; }
     case 'pick-file': document.getElementById('file-'+el.dataset.kind).click(); break;
+    case 'pick-photo': document.getElementById('file-photo-'+el.dataset.child+'-'+el.dataset.slot).click(); break;
     case 'pay-full': payFull(el.dataset.inv); break;
     case 'pay-half': payHalf(el.dataset.inv); break;
     case 'pay-balance': payBalance(el.dataset.inv); break;
@@ -1058,14 +1143,21 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const inp = e.target;
-  if(inp.type==='file' && inp.id && inp.id.startsWith('file-')) handleUpload(inp.id.slice(5), inp.files[0]);
+  if(inp.type !== 'file' || !inp.id) return;
+  if(inp.id.startsWith('file-photo-')){
+    const rest = inp.id.slice('file-photo-'.length);
+    const idx = rest.lastIndexOf('-');
+    handleChildPhoto(rest.slice(0, idx), Number(rest.slice(idx+1)), inp.files[0]);
+    return;
+  }
+  if(inp.id.startsWith('file-')) handleUpload(inp.id.slice(5), inp.files[0]);
 });
 document.addEventListener('submit', async e => {
   const f = e.target; const kind = f.dataset.form; if(!kind) return; e.preventDefault();
   if(kind==='student-signin'){ signInWithStudentNo(f.studentNo.value); return; }
   if(kind==='appeal'){
     if(!currentUser()) return openSignIn();
-    const app = latestApp(SESSION.email);
+    const app = dismissedApp();
     if(!app || app.status !== 'rejected') return toast('There is nothing to appeal.','err');
     if(app.appeal) return toast('You have already used your one appeal.','err');
     try{
@@ -1114,6 +1206,7 @@ document.addEventListener('submit', async e => {
         relation: f.relation.value,
         address:{ line1:f.line1.value.trim(), suburb:f.suburb.value.trim(), city:f.city.value.trim(),
                   province:f.province.value, postal:f.postal.value.trim() },
+        documentsNote: f.documentsNote ? f.documentsNote.value.trim() : '',
         children,
         emergency:{ name:f.emName.value.trim(), phone:f.emPhone.value.trim() }
       });

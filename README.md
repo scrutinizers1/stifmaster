@@ -84,33 +84,69 @@ branch gets a preview URL.
 
 - Parent signs in (Google, email+password, or student-number link) and submits the
   enrolment form with real name, full address, children and emergency contact.
+- **Multiple children / multiple applications.** A parent can enrol another child at
+  any time — even while one child is already enrolled. Student numbers, invoices,
+  messages and the dashboard all aggregate across every application.
 - Parent uploads **ID** and **proof of address**; files go to a **private** storage
-  bucket and are only visible to that parent and staff.
+  bucket and are only visible to that parent and staff. If they can't attach them yet
+  (foreign documents, a bill in someone else's name…), they type **why** in a box on
+  the form and can still submit — the note is shown to staff.
 - Staff see new applications **without refreshing** (Realtime) and approve or dismiss.
 - Approving issues a unique student number (`LB26-1001`, `LB26-1002`, …), creates the
   month's invoice and posts a welcome notice.
+- **Child photos.** After approval the parent is *promptly but never forced* to upload
+  two photos of each child. They show up as round avatars next to the account, in the
+  header, and on the learner card.
 - Fees: pay in full, pay half now and settle the rest in N days, or clear the balance.
   Every payment is recorded with a reference.
-- Notices: trips, menu changes, parties, farewells — targeted to everyone, a
-  programme, or one learner, with unread badges.
+- Notices: trips, menu changes, parties, farewells, educational, uniform, hygiene,
+  emergency and fees — targeted to everyone, a programme, or one learner, with unread
+  badges.
+- **Personal messages.** From a learner's card, staff pick a category, type a subject
+  and body, and send. A greeting, the child's name and their student number are added
+  automatically; the message lands in the parent's portal **and** their inbox.
+- **Broadcast.** One button posts an on-site notice to every approved parent and emails
+  them all at once.
 - Dismissal: the portal locks for that family; they get **one** appeal, which staff can
   uphold or accept (undismiss). Undismissing restores access and keeps the student number.
-- Every automated email is logged in **admin.html → Emails** (real delivery if you add
-  EmailJS keys in Settings).
+- Every email is logged in **admin.html → Emails** as `queued → sent / failed`, with the
+  delivery error kept on the row. SMS is only ever sent when it's free of charge; with no
+  free gateway configured, SMS attempts are logged as `skipped` and email is used instead.
 
 ---
 
-## 4. Security notes
+## 4. Real email (Resend)
+
+Email is delivered by the Supabase Edge Function `supabase/functions/send-email`
+(which calls [Resend](https://resend.com)). The API key never touches the browser:
+only a signed-in **staff** account can invoke the function.
+
+1. Create a Resend account and verify a sending domain (or use their test sender
+   `onboarding@resend.dev` while you try it out).
+2. **Dashboard → Edge Functions → Create function**, name it **`send-email`**, and paste
+   the contents of `supabase/functions/send-email/index.ts`. Deploy it.
+3. **Edge Functions → send-email → Secrets** (or `supabase secrets set`) and add:
+   - `RESEND_API_KEY` = `re_...`
+   - `MAIL_FROM` = `Light Bearers <hello@yourdomain.co.za>` (optional)
+4. In **admin.html → Settings**, set the **Email “from”** address to the same verified
+   sender, then save.
+
+That's it — approvals, dismissals, appeals, personal messages and broadcasts now send
+real mail and appear in the Outbox.
+
+---
+
+## 5. Security notes
 
 - `config.js` holds the **anon** key only. It's public by design; Row Level Security
   enforces what each signed-in user can read or write. Never put the `service_role`
   key in this repo.
 - Parents can only ever see their own application, children, documents, invoices and
   the notices addressed to them.
-- Everything privileged (approving, student numbers, settings, outbox) runs through
-  Postgres functions that check `is_admin()`.
+- Everything privileged (approving, student numbers, settings, outbox, sending email)
+  runs through Postgres functions or the Edge Function that check `is_admin()`.
 
-## 5. Still to do for real money
+## 6. Still to do for real money
 
 The pay button records payments but does **not** talk to Yoco yet. Going live needs a
 small backend so the Yoco **secret key** and **webhook** stay off the browser:

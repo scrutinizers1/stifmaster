@@ -170,8 +170,31 @@ insert into public.settings(key, value) values
   ('yocoPublicKey',   '""'::jsonb),
   ('emailjsService',  '""'::jsonb),
   ('emailjsTemplate', '""'::jsonb),
-  ('emailjsPublicKey','""'::jsonb)
+  ('emailjsPublicKey','""'::jsonb),
+  ('mailFrom',        '"Light Bearers Child Care Centre <onboarding@resend.dev>"'::jsonb),
+  ('smsEnabled',      'false'::jsonb)
 on conflict (key) do nothing;
+
+-- ---------------------------------------------------------------------------
+--  MIGRATIONS  (safe to re-run against an existing project)
+-- ---------------------------------------------------------------------------
+-- messages: personal (direct) messages carry the learner's details
+alter table public.messages     add column if not exists kind       text not null default 'broadcast';
+alter table public.messages     add column if not exists child_id   uuid references public.children(id) on delete set null;
+alter table public.messages     add column if not exists child_name text;
+alter table public.messages     add column if not exists student_no text;
+alter table public.messages     add column if not exists recipient  text;
+alter table public.messages     add column if not exists greeting   text;
+alter table public.messages     add column if not exists channel    text default 'site';
+-- documents: photos of the child, tied to the learner
+alter table public.documents    add column if not exists child_id   uuid references public.children(id) on delete cascade;
+-- applications: why ID / proof of address was not attached (e.g. foreign parents)
+alter table public.applications add column if not exists documents_note text default '';
+-- outbox: channel, what kind of message it was, and any delivery error
+alter table public.outbox       add column if not exists channel    text default 'email';
+alter table public.outbox       add column if not exists kind       text default 'transactional';
+alter table public.outbox       add column if not exists message_id uuid;
+alter table public.outbox       add column if not exists error      text;
 
 -- ===========================================================================
 --  HELPERS
@@ -503,6 +526,60 @@ begin
      set appeal_status = case when p_accept then 'accepted' else 'declined' end
    where id = p_app;
 end $$;
+
+-- Admin: send a personal message about one learner. The greeting, the learner's
+-- name and their student number are always attached to the body, so a parent can
+-- never receive a note about "a child" without knowing which child it is.
+create or replace function public.send_direct_message(
+  p_child uuid, p_category text, p_title text, p_body text, p_important boolean default false
+) returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  c public.children;
+  a public.applications;
+  v_greeting text;
+  v_title text;
+  v_body text;
+  mid uuid;
+begin
+  if not public.is_admin() then raise exception 'not allowed'; end if;
+  if coalesce(trim(p_body),'') = '' then raise exception 'please type a message'; end if;
+
+  select * into c from public.children where id = p_child;
+  if c is null then raise exception 'learner not found'; end if;
+  select * into a from public.applications where id = c.application_id;
+  if a is null then raise exception 'application not found'; end if;
+
+  v_greeting := 'Dear ' || coalesce(nullif(trim(a.parent_name),''),'Parent') || ',';
+  v_title    := coalesce(nullif(trim(p_title),''), 'A note about ' || c.name);
+  v_body     := v_greeting || E'\n\n' || trim(p_body) || E'\n\n' ||
+                'Re: ' || c.name || coalesce(' — ' || c.student_no, '');
+
+  insert into public.messages(
+    title, body, category, audience, target, important, author,
+    kind, child_id, child_name, student_no, recipient, greeting, channel
+  ) values (
+    v_title, v_body, coalesce(nullif(p_category,''),'general'), 'student', c.id::text,
+    coalesce(p_important,false), 'Front office',
+    'direct', c.id, c.name, c.student_no, a.email, v_greeting, 'site'
+  ) returning id into mid;
+
+  return jsonb_build_object(
+    'id', mid, 'to', a.email, 'subject', v_title, 'body', v_body,
+    'parent', a.parent_name, 'phone', a.phone,
+    'child', c.name, 'student_no', c.student_no
+  );
+end $$;
+
+-- Admin: every approved parent's contact details (used for broadcast email / SMS)
+create or replace function public.approved_parent_contacts()
+returns table(email text, parent_name text, phone text)
+language sql stable security definer set search_path = public as $$
+  select distinct a.email, a.parent_name, a.phone
+  from public.applications a
+  where a.status = 'approved'
+    and public.is_admin()
+  order by a.email;
+$$;
 
 -- Record a fee payment and update the invoice atomically.
 -- Callable by the owning parent or by staff.
