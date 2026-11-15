@@ -376,7 +376,7 @@ create or replace function public.ensure_my_invoices(p_fees jsonb default '{}'::
 returns int language plpgsql security definer set search_path = public as $$
 declare
   r record;
-  period text := to_char(now(), 'YYYY-MM');
+  v_period text := to_char(now(), 'YYYY-MM');
   fee numeric;
   n int := 0;
 begin
@@ -386,10 +386,10 @@ begin
     join public.applications a on a.id = c.application_id
     where a.user_id = auth.uid() and a.status = 'approved'
   loop
-    if not exists (select 1 from public.invoices i where i.child_id = r.id and i.period = period) then
+    if not exists (select 1 from public.invoices i where i.child_id = r.id and i.period = v_period) then
       fee := coalesce((p_fees->>r.program)::numeric, 1500);
       insert into public.invoices(child_id, child_name, program, period, amount, paid, status)
-      values (r.id, r.name, r.program, period, fee, 0, 'unpaid');
+      values (r.id, r.name, r.program, v_period, fee, 0, 'unpaid');
       n := n + 1;
     end if;
   end loop;
@@ -401,7 +401,7 @@ create or replace function public.ensure_invoices_for(p_app uuid, p_fees jsonb d
 returns int language plpgsql security definer set search_path = public as $$
 declare
   r record;
-  period text := to_char(now(), 'YYYY-MM');
+  v_period text := to_char(now(), 'YYYY-MM');
   fee numeric;
   n int := 0;
 begin
@@ -412,10 +412,10 @@ begin
     join public.applications a on a.id = c.application_id
     where a.id = p_app and a.status = 'approved'
   loop
-    if not exists (select 1 from public.invoices i where i.child_id = r.id and i.period = period) then
+    if not exists (select 1 from public.invoices i where i.child_id = r.id and i.period = v_period) then
       fee := coalesce((p_fees->>r.program)::numeric, 1500);
       insert into public.invoices(child_id, child_name, program, period, amount, paid, status)
-      values (r.id, r.name, r.program, period, fee, 0, 'unpaid');
+      values (r.id, r.name, r.program, v_period, fee, 0, 'unpaid');
       n := n + 1;
     end if;
   end loop;
@@ -430,7 +430,7 @@ create or replace function public.approve_application(
 declare
   r record;
   no text;
-  period text := to_char(now(), 'YYYY-MM');
+  v_period text := to_char(now(), 'YYYY-MM');
   fee numeric;
   issued jsonb := '[]'::jsonb;
 begin
@@ -455,10 +455,10 @@ begin
       issued := issued || to_jsonb(no);
     end if;
 
-    if not exists (select 1 from public.invoices i where i.child_id = r.id and i.period = period) then
+    if not exists (select 1 from public.invoices i where i.child_id = r.id and i.period = v_period) then
       fee := coalesce((p_fees->>r.program)::numeric, 1500);
       insert into public.invoices(child_id, child_name, program, period, amount, paid, status)
-      values (r.id, r.name, r.program, period, fee, 0, 'unpaid');
+      values (r.id, r.name, r.program, v_period, fee, 0, 'unpaid');
     end if;
   end loop;
 
@@ -511,7 +511,7 @@ create or replace function public.record_payment(
 ) returns jsonb language plpgsql security definer set search_path = public as $$
 declare
   inv public.invoices;
-  ref text;
+  v_ref text;
   plan_days int;
   new_paid numeric;
 begin
@@ -525,10 +525,10 @@ begin
   select coalesce((value)::text::int, 60) into plan_days from public.settings where key = 'planDays';
   plan_days := coalesce(plan_days, 60);
 
-  ref := 'LB' || lpad((floor(random() * 10000000))::bigint::text, 7, '0');
+  v_ref := 'LB' || lpad((floor(random() * 10000000))::bigint::text, 7, '0');
 
   insert into public.payments(invoice_id, amount, method, ref)
-  values (p_invoice, p_amount, p_method, ref);
+  values (p_invoice, p_amount, p_method, v_ref);
 
   new_paid := inv.paid + p_amount;
 
@@ -541,7 +541,7 @@ begin
                     else due_date end
   where id = p_invoice;
 
-  return jsonb_build_object('ref', ref, 'paid', new_paid, 'balance', inv.amount - new_paid);
+  return jsonb_build_object('ref', v_ref, 'paid', new_paid, 'balance', inv.amount - new_paid);
 end $$;
 
 -- ===========================================================================
