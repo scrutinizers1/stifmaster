@@ -475,6 +475,15 @@
       });
       if (r.error) {
         detail = r.error.message || String(r.error);
+        // FunctionsHttpError carries the Response in .context — read the JSON body
+        // so the real reason ("RESEND_API_KEY is not set", etc.) reaches the Outbox.
+        try {
+          var ctx = r.error.context;
+          if (ctx && typeof ctx.json === 'function') {
+            var j = await ctx.json();
+            if (j && j.error) detail = j.error;
+          }
+        } catch (e2) { /* keep the generic message */ }
       } else if (r.data && r.data.error) {
         detail = r.data.error;
       } else {

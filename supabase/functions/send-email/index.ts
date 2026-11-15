@@ -40,6 +40,8 @@ Deno.serve(async (req: Request) => {
   try {
     const auth = req.headers.get('Authorization') || ''
     if (!auth) return json({ error: 'Missing Authorization header' }, 401)
+    const token = auth.replace(/^Bearer\s+/i, '').trim()
+    if (!token) return json({ error: 'Missing bearer token' }, 401)
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -47,7 +49,9 @@ Deno.serve(async (req: Request) => {
       { global: { headers: { Authorization: auth } } }
     )
 
-    const { data: userData, error: userErr } = await supabase.auth.getUser()
+    // Validate the caller's JWT explicitly (getUser() with no argument would look
+    // for a stored session, which a fresh server-side client never has).
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token)
     if (userErr || !userData?.user) return json({ error: 'Not signed in' }, 401)
 
     const { data: isAdmin, error: adminErr } = await supabase.rpc('is_admin')
