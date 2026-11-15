@@ -825,6 +825,7 @@ function viewDocuments(){
   if(!user) return viewGate('Documents','Sign in to upload your ID and proof of address.');
   const docs = DB.docs[user.email] || {};
   const app = latestApp(user.email);
+  const notes = myApps(user.email).filter(a => a.documentsNote);
   const slot = (kind, title, tip) => {
     const d = docs[kind];
     return `
@@ -849,7 +850,7 @@ function viewDocuments(){
     <h2 style="margin-top:12px">ID &amp; proof of address</h2>
     <p class="lead">We need these to verify every child before their first day. Your files are uploaded securely and only staff can see them. You may submit an application without them if you explain why on the enrolment form.</p>
     ${app ? statusCard(app,true) : `<div class="status pending" style="margin-bottom:20px"><div class="ico">📝</div><div><h3>No application yet</h3><p>Please <a href="#apply" data-action="go" data-route="apply" style="color:var(--primary-d);font-weight:700">fill in the enrolment form</a> first, then upload your documents here.</p></div></div>`}
-    ${app && app.documentsNote ? `<div class="note" style="margin-bottom:16px">📝 <b>You told us:</b> “${esc(app.documentsNote)}”</div>` : ''}
+    ${notes.map(a=>`<div class="note" style="margin-bottom:16px">📝 <b>You told us:</b> “${esc(a.documentsNote)}”</div>`).join('')}
     <div class="doc-row mt">${slot('id','Copy of parent / guardian ID','Upload a clear photo of your ID card or smart-card page.')}${slot('address','Proof of address','A recent bill, bank statement or lease (not older than 3 months).')}</div>
     <div class="note">📸 Photos of your child are added from your <a href="#dashboard" data-action="go" data-route="dashboard" style="color:var(--primary-d);font-weight:700">dashboard</a> — look for the “Add photo” buttons on your child's learner card.</div>
   </section>`;
