@@ -47,33 +47,6 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ---------------------------------------------------------------------------
---  HELPERS  (SECURITY DEFINER so policies can't recurse into themselves)
--- ---------------------------------------------------------------------------
-create or replace function public.is_admin()
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin');
-$$;
-
-create or replace function public.my_child_ids()
-returns setof uuid language sql stable security definer set search_path = public as $$
-  select c.id from public.children c
-  join public.applications a on a.id = c.application_id
-  where a.user_id = auth.uid();
-$$;
-
-create or replace function public.my_programs()
-returns setof text language sql stable security definer set search_path = public as $$
-  select distinct c.program from public.children c
-  join public.applications a on a.id = c.application_id
-  where a.user_id = auth.uid();
-$$;
-
-create or replace function public.owns_application(p_app uuid)
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.applications a where a.id = p_app and a.user_id = auth.uid());
-$$;
-
--- ---------------------------------------------------------------------------
 --  APPLICATIONS
 -- ---------------------------------------------------------------------------
 create table if not exists public.applications (
@@ -199,6 +172,35 @@ insert into public.settings(key, value) values
   ('emailjsTemplate', '""'::jsonb),
   ('emailjsPublicKey','""'::jsonb)
 on conflict (key) do nothing;
+
+-- ===========================================================================
+--  HELPERS
+--  Defined after the tables because Postgres validates SQL function bodies at
+--  creation time. SECURITY DEFINER so policies can't recurse into themselves.
+-- ===========================================================================
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin');
+$$;
+
+create or replace function public.my_child_ids()
+returns setof uuid language sql stable security definer set search_path = public as $$
+  select c.id from public.children c
+  join public.applications a on a.id = c.application_id
+  where a.user_id = auth.uid();
+$$;
+
+create or replace function public.my_programs()
+returns setof text language sql stable security definer set search_path = public as $$
+  select distinct c.program from public.children c
+  join public.applications a on a.id = c.application_id
+  where a.user_id = auth.uid();
+$$;
+
+create or replace function public.owns_application(p_app uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.applications a where a.id = p_app and a.user_id = auth.uid());
+$$;
 
 -- ===========================================================================
 --  ROW LEVEL SECURITY
