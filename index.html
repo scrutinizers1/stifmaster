@@ -311,8 +311,8 @@ footer{border-top:1px solid var(--line);background:#fffdfa;padding:40px 20px cal
       <a href="admin.html">Staff / admin login →</a>
     </div>
     <div class="fine">
-      <span>© <span id="yr"></span> Light Bearers Child Care Centre. Demo portal — data is stored only in this browser.</span>
-      <span>🔒 Documents stay on your device in demo mode</span>
+      <span>© <span id="yr"></span> Light Bearers Child Care Centre. Enrol online, upload documents and pay fees securely.</span>
+      <span>🔒 Your documents are stored securely and only staff can see them</span>
     </div>
   </div>
 </footer>
@@ -320,18 +320,19 @@ footer{border-top:1px solid var(--line);background:#fffdfa;padding:40px 20px cal
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="lb-store.js"></script>
 <script>
 /* =====================================================================
    Light Bearers Child Care Centre — PARENT portal (index.html)
-   Single file, no build step. Demo data lives in this browser's
-   localStorage and is shared with admin.html (same folder / origin).
+   No build step. Data lives in Supabase (shared Postgres) so the office
+   sees your application from any device. See lb-store.js + config.js.
    ===================================================================== */
 
 const CONFIG = {
   centre: 'Light Bearers Child Care Centre',
-  googleClientId: '',
   yocoPublicKey: '',
-  adminPassword: 'lightbearers',
   planDays: 60,
   registrationFee: 350
 };
@@ -344,22 +345,24 @@ const PROGRAMS = {
 };
 const PROVINCES = ['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','Northern Cape','North West','Western Cape'];
 
-const KEY = 'lightbearers_v1';
-const SKEY = 'lightbearers_session';
-
+/* ---- data layer: everything lives in Supabase (see lb-store.js) ---- */
 function normalizeDB(d){
   d = (d && typeof d === 'object') ? d : {};
   d.users = d.users || {}; d.apps = d.apps || []; d.docs = d.docs || {};
   d.invoices = d.invoices || []; d.settings = d.settings || {};
   d.messages = d.messages || []; d.outbox = d.outbox || []; d.read = d.read || {};
+  d.profiles = d.profiles || [];
   return d;
 }
-function loadDB(){ try{ return normalizeDB(JSON.parse(localStorage.getItem(KEY))); }catch(e){ return normalizeDB({}); } }
-function saveDB(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ toast('Storage is full — remove an old document.', 'err'); } }
-let DB = loadDB();
+let DB = normalizeDB({});
+let SESSION = null;   /* { email } */
+let ME = null;        /* the signed-in Supabase user */
 
-let SESSION = null;
-try{ SESSION = JSON.parse(localStorage.getItem(SKEY) || 'null'); }catch(e){ SESSION = null; }
+function applySession(){
+  DB = normalizeDB(LB.db);
+  ME = LB.user() || null;
+  SESSION = ME ? { email: ME.email } : null;
+}
 
 let route = (location.hash || '#home').slice(1);
 if(!['home','programs','fees','apply','documents','dashboard','messages'].includes(route)) route = 'home';
@@ -405,22 +408,22 @@ function unreadCount(email){
   return myMessages(email).filter(m => !read.includes(m.id)).length;
 }
 function markAllRead(email){
-  const read = DB.read[email] || [];
-  myMessages(email).forEach(m => { if(!read.includes(m.id)) read.push(m.id); });
-  DB.read[email] = read; saveDB();
+  const ids = myMessages(email).map(m => m.id);
+  LB.markRead(ids).catch(e => toast(e.message,'err'));
 }
-function signInWithStudentNo(no){
-  const hit = findByStudentNo(no);
-  if(!hit) return toast('No learner found with that student number.','err');
-  if(hit.app.status === 'rejected') return toast('This enrolment has been dismissed. Please contact the office to appeal.','err');
-  if(hit.app.status !== 'approved') return toast('That enrolment is not approved yet.','err');
-  const email = hit.app.email;
-  DB.users[email] = DB.users[email] || { email, name:hit.app.parentName, picture:'', createdAt:new Date().toISOString() };
-  SESSION = { email };
-  localStorage.setItem(SKEY, JSON.stringify(SESSION));
-  saveDB(); closeModal();
-  toast('Welcome back, ' + (hit.app.parentName||'').split(' ')[0] + '!','ok');
-  go('dashboard');
+async function signInWithStudentNo(no){
+  const q = String(no||'').trim();
+  if(!q) return toast('Enter your student number.','err');
+  try{
+    const email = await LB.studentNoLogin(q);
+    closeModal();
+    openModal(`
+      <button class="close" data-action="close-modal">✕</button>
+      <h3>Check your email</h3>
+      <p class="mut">We sent a one-time sign-in link to <b>${esc(email)}</b>. Open it on this device to enter your parent portal.</p>
+      <div class="note">Nothing arrived? Check your spam folder, or sign in with Google / your email and password instead.</div>
+    `);
+  }catch(e){ toast(e.message,'err'); }
 }
 function toast(msg, kind){
   const t = document.getElementById('toast');
@@ -432,94 +435,67 @@ function openModal(html){ document.getElementById('sheet').innerHTML = html; doc
 function closeModal(){ document.getElementById('modal').classList.remove('open'); }
 function go(r){ location.hash = '#' + r; }
 
-/* ---------------- google sign-in ---------------- */
-function initGoogle(){
-  const cid = setting('googleClientId');
-  if(!cid || window.google) return;
-  const s = document.createElement('script');
-  s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.defer = true;
-  s.onload = () => {
-    try{
-      window.google.accounts.id.initialize({ client_id: cid, callback: onGoogleCredential });
-      const host = document.getElementById('gbtn');
-      if(host) window.google.accounts.id.renderButton(host, { theme:'outline', size:'large', width:320, text:'continue_with', shape:'pill' });
-    }catch(e){ console.warn(e); }
-  };
-  document.head.appendChild(s);
+/* ---------------- sign in / sign out (Supabase Auth) ---------------- */
+async function afterAuth(){
+  await LB.load();
+  applySession();
+  render();
+  if(route === 'home') go('dashboard');
 }
-function parseJwt(t){
-  try{ const p=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(atob(p).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''))); }
-  catch(e){ return {}; }
+async function doGoogle(){
+  try{ await LB.signInGoogle(); }
+  catch(e){ toast(e.message, 'err'); }
 }
-function onGoogleCredential(res){
-  const p = parseJwt(res.credential);
-  if(!p.email) return toast('Could not read Google account.','err');
-  signIn({ email:p.email, name:p.name||p.email, picture:p.picture||'' });
+function signOut(){
+  LB.signOut().then(function(){ applySession(); toast('Signed out.'); go('home'); })
+    .catch(function(e){ toast(e.message, 'err'); });
 }
-function signIn(u){
-  DB.users[u.email] = Object.assign({ createdAt:new Date().toISOString() }, DB.users[u.email]||{}, u);
-  SESSION = { email:u.email };
-  localStorage.setItem(SKEY, JSON.stringify(SESSION));
-  saveDB(); closeModal();
-  toast('Welcome, ' + (u.name||u.email).split(' ')[0] + '!','ok');
-  if(route==='home') go('dashboard'); else render();
-}
-function signOut(){ SESSION=null; localStorage.removeItem(SKEY); toast('Signed out.'); go('home'); }
 function openSignIn(){
-  const hasGoogle = !!setting('googleClientId');
   openModal(`
     <button class="close" data-action="close-modal">✕</button>
     <h3>Sign in</h3>
-    <p class="mut">Use your child's <b>student number</b>, or continue with Google.</p>
+    <p class="mut">Use your child's <b>student number</b>, your email, or continue with Google.</p>
     <form data-form="student-signin">
       <label class="f">Student number
         <input name="studentNo" placeholder="e.g. LB26-1001" required autocomplete="off" spellcheck="false" style="text-transform:uppercase;font-weight:700;letter-spacing:.04em">
-        <span class="hint">Issued when we approve your enrolment. Use it to pay fees and read notices.</span>
+        <span class="hint">Issued when we approve your enrolment. We'll email you a one-time sign-in link.</span>
       </label>
-      <button class="btn p block" style="margin-top:14px" type="submit">Enter parent portal</button>
+      <button class="btn p block" style="margin-top:14px" type="submit">Email me a sign-in link</button>
     </form>
     <div style="display:flex;align-items:center;gap:10px;margin:18px 0"><span style="flex:1;height:1px;background:var(--line)"></span><span style="font-size:12px;color:var(--muted);font-weight:700">OR</span><span style="flex:1;height:1px;background:var(--line)"></span></div>
-    ${hasGoogle
-      ? `<div id="gbtn" style="display:grid;place-items:center;margin:6px 0 4px"></div>`
-      : `<form data-form="demo-signin">
-           <label class="f">New family? Sign in with email
-             <input type="email" name="email" placeholder="you@gmail.com" required autocomplete="email">
-           </label>
-           <label class="f" style="margin-top:12px">Your name
-             <input type="text" name="name" placeholder="e.g. Thandi Mokoena" required>
-           </label>
-           <button class="btn ghost block" style="margin-top:14px" type="submit">Continue with email</button>
-         </form>
-         <div class="note"><b>Demo mode.</b> Real “Sign in with Google” switches on the moment a Google Client ID is saved in <b>admin.html → Settings</b>.</div>`}
+    <button class="btn ghost block" type="button" data-action="google">Continue with Google</button>
+    <form data-form="email-signin" style="margin-top:16px">
+      <label class="f">Email
+        <input type="email" name="email" placeholder="you@gmail.com" required autocomplete="email">
+      </label>
+      <label class="f" style="margin-top:12px">Password
+        <input type="password" name="password" minlength="6" placeholder="At least 6 characters" required autocomplete="current-password">
+      </label>
+      <label class="f" style="margin-top:12px">Your name <span class="hint" style="display:inline">(only for a new account)</span>
+        <input type="text" name="name" placeholder="e.g. Thandi Mokoena">
+      </label>
+      <div class="row-b" style="margin-top:14px;gap:10px">
+        <button class="btn p" type="submit" data-mode="signin" style="flex:1">Sign in</button>
+        <button class="btn ghost" type="submit" data-mode="create" style="flex:1">Create account</button>
+      </div>
+      <div class="note">Your details are stored securely on our server — not in this browser — so the office sees your application on any device.</div>
+    </form>
   `);
-  if(hasGoogle) initGoogle();
 }
 
 /* ---------------- invoices ---------------- */
+let _ensured = false;
 function ensureInvoices(email){
   const app = latestApp(email);
   if(!app || app.status !== 'approved') return;
   const period = new Date().toISOString().slice(0,7);
-  let added = false;
-  app.children.forEach(ch => {
-    if(!DB.invoices.some(i => i.email===email && i.childId===ch.id && i.period===period)){
-      const prog = PROGRAMS[ch.program] || PROGRAMS.preschool;
-      DB.invoices.push({ id:uid(), email, childId:ch.id, childName:ch.name, program:ch.program, period,
-        amount:prog.fee, paid:0, status:'unpaid', plan:false, dueDate:null, payments:[], createdAt:new Date().toISOString() });
-      added = true;
-    }
-  });
-  if(added) saveDB();
+  const missing = app.children.some(ch => !DB.invoices.some(i => i.email===email && i.childId===ch.id && i.period===period));
+  if(missing && !_ensured){
+    _ensured = true;
+    LB.ensureMyInvoices().catch(function(){});
+  }
 }
 function myInvoices(email){ return DB.invoices.filter(i=>i.email===email).sort((a,b)=> a.period < b.period ? 1 : -1); }
-function recordPayment(inv, amount, method){
-  amount = Math.round(amount); if(amount<=0) return;
-  inv.payments = inv.payments || [];
-  inv.payments.push({ at:new Date().toISOString(), amount, method, ref:'LB'+Date.now().toString().slice(-7) });
-  inv.paid = (inv.paid||0) + amount;
-  if(inv.paid >= inv.amount){ inv.status='paid'; inv.plan=false; inv.dueDate=null; } else { inv.status='partial'; }
-  saveDB();
-}
 
 /* ---------------- payments ---------------- */
 function payFull(id){ openPayModal(id,'full'); }
@@ -551,51 +527,32 @@ function openPayModal(invId, mode){
   `);
   document.querySelectorAll('#sheet .pay-opt').forEach(el=>{ el.onclick = () => { document.querySelectorAll('#sheet .pay-opt').forEach(x=>x.classList.remove('on')); el.classList.add('on'); }; });
 }
-function confirmPayment(invId, mode, amount){
+async function confirmPayment(invId, mode, amount){
   const inv = DB.invoices.find(i=>i.id===invId); if(!inv) return;
   const on = document.querySelector('#sheet .pay-opt.on');
   const method = on ? on.dataset.method : 'Card (Yoco)';
   amount = Number(amount)||0;
   const btn = document.querySelector('[data-action="confirm-payment"]');
   if(btn){ btn.disabled = true; btn.textContent = 'Processing…'; }
-  setTimeout(()=>{
-    recordPayment(inv, amount, method);
-    if(mode==='half'){ inv.plan = true; inv.dueDate = new Date(Date.now()+setting('planDays')*86400000).toISOString(); saveDB(); }
+  try{
+    await LB.recordPayment(invId, amount, method, mode==='half');
     closeModal(); toast('Payment of '+R(amount)+' received. Thank you!','ok'); render();
-  }, 850);
+  }catch(e){
+    if(btn){ btn.disabled = false; btn.textContent = 'Try again'; }
+    toast(e.message,'err');
+  }
 }
 
 /* ---------------- uploads ---------------- */
-function compressImage(file, max, q){
-  return new Promise((resolve,reject)=>{
-    const r = new FileReader();
-    r.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        let w=img.width,h=img.height; const s=Math.min(1,max/Math.max(w,h));
-        w=Math.round(w*s); h=Math.round(h*s);
-        const c=document.createElement('canvas'); c.width=w; c.height=h;
-        c.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(c.toDataURL('image/jpeg',q));
-      };
-      img.onerror = reject; img.src = r.result;
-    };
-    r.onerror = reject; r.readAsDataURL(file);
-  });
-}
 async function handleUpload(kind, file){
   if(!file) return;
   if(file.size > 6*1024*1024) return toast('File is too big (max 6 MB).','err');
-  const email = SESSION.email;
-  DB.docs[email] = DB.docs[email] || {};
+  if(!(file.type.indexOf('image/')===0 || file.type === 'application/pdf')) return toast('Please upload a JPG, PNG or PDF.','err');
+  toast('Uploading ' + file.name + '…');
   try{
-    let dataUrl;
-    if(file.type.startsWith('image/')) dataUrl = await compressImage(file, 1100, .72);
-    else if(file.type === 'application/pdf') dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
-    else return toast('Please upload a JPG, PNG or PDF.','err');
-    DB.docs[email][kind] = { name:file.name, type:file.type, dataUrl, at:new Date().toISOString() };
-    saveDB(); toast('Document uploaded.','ok'); render();
-  }catch(e){ toast('Could not read that file.','err'); }
+    await LB.uploadDocument(kind, file);
+    toast('Document uploaded.','ok'); render();
+  }catch(e){ toast(e.message,'err'); }
 }
 
 /* =================== VIEWS =================== */
@@ -831,7 +788,7 @@ function viewDocuments(){
   <section class="section" style="margin-top:8px">
     <span class="pill"><b></b> Documents</span>
     <h2 style="margin-top:12px">ID &amp; proof of address</h2>
-    <p class="lead">We need these to verify every child before their first day. Your files are kept on your own device in demo mode.</p>
+    <p class="lead">We need these to verify every child before their first day. Your files are uploaded securely and only staff can see them.</p>
     ${app ? statusCard(app,true) : `<div class="status pending" style="margin-bottom:20px"><div class="ico">📝</div><div><h3>No application yet</h3><p>Please <a href="#apply" data-action="go" data-route="apply" style="color:var(--primary-d);font-weight:700">fill in the enrolment form</a> first, then upload your documents here.</p></div></div>`}
     <div class="doc-row mt">${slot('id','Copy of parent / guardian ID','Upload a clear photo of your ID card or smart-card page.')}${slot('address','Proof of address','A recent bill, bank statement or lease (not older than 3 months).')}</div>
   </section>`;
@@ -1046,7 +1003,7 @@ function viewGate(title,msg){
       <div style="font-size:44px;margin-bottom:12px">🔐</div>
       <h2>${esc(title)}</h2>
       <p style="color:var(--muted);margin:10px 0 22px">${esc(msg)}</p>
-      <button class="btn p" data-action="signin">Continue with Google</button>
+      <button class="btn p" data-action="signin">Sign in to continue</button>
     </div>
   </section>`;
 }
@@ -1062,12 +1019,21 @@ function renderWho(){
   const user = currentUser();
   const who = document.getElementById('who');
   if(user) who.innerHTML = `${avHTML(user)}<span class="nm">${esc((user.name||'').split(' ')[0]||'Parent')}<span>Parent</span></span><button class="btn ghost sm" data-action="go" data-route="dashboard">Dashboard</button>`;
-  else who.innerHTML = `<button class="btn p sm" data-action="signin">Sign in with Google</button>`;
+  else who.innerHTML = `<button class="btn p sm" data-action="signin">Sign in</button>`;
+}
+function showSetup(){
+  const v = document.getElementById('view'); if(!v) return;
+  v.insertAdjacentHTML('afterbegin',
+    `<section class="section" style="margin-top:8px"><div class="status pending"><div class="ico">🔧</div><div>
+       <h3>Backend not connected yet</h3>
+       <p>Add your Supabase <b>Project URL</b> and <b>anon key</b> to <code>config.js</code>, and run <code>supabase/schema.sql</code> once in the Supabase SQL editor. Until then nothing is shared between devices.</p>
+     </div></div></section>`);
 }
 function render(){
   renderNav(); renderWho();
   const map = { home:viewHome, programs:viewPrograms, fees:viewFees, apply:viewApply, documents:viewDocuments, dashboard:viewDashboard, messages:viewMessages };
   document.getElementById('view').innerHTML = (map[route]||viewHome)();
+  if(!LB.configured) showSetup();
   window.scrollTo(0,0);
 }
 
@@ -1076,6 +1042,7 @@ document.addEventListener('click', e => {
   switch(el.dataset.action){
     case 'go': e.preventDefault(); go(el.dataset.route); break;
     case 'signin': openSignIn(); break;
+    case 'google': doGoogle(); break;
     case 'signout': signOut(); break;
     case 'close-modal': closeModal(); break;
     case 'start-apply': if(!currentUser()){ toast('Please sign in first.'); openSignIn(); } else go('apply'); break;
@@ -1086,14 +1053,14 @@ document.addEventListener('click', e => {
     case 'pay-half': payHalf(el.dataset.inv); break;
     case 'pay-balance': payBalance(el.dataset.inv); break;
     case 'confirm-payment': confirmPayment(el.dataset.inv, el.dataset.mode, el.dataset.amount); break;
-    case 'mark-read': markAllRead(SESSION.email); render(); break;
+    case 'mark-read': markAllRead(SESSION.email); break;
   }
 });
 document.addEventListener('change', e => {
   const inp = e.target;
   if(inp.type==='file' && inp.id && inp.id.startsWith('file-')) handleUpload(inp.id.slice(5), inp.files[0]);
 });
-document.addEventListener('submit', e => {
+document.addEventListener('submit', async e => {
   const f = e.target; const kind = f.dataset.form; if(!kind) return; e.preventDefault();
   if(kind==='student-signin'){ signInWithStudentNo(f.studentNo.value); return; }
   if(kind==='appeal'){
@@ -1101,40 +1068,60 @@ document.addEventListener('submit', e => {
     const app = latestApp(SESSION.email);
     if(!app || app.status !== 'rejected') return toast('There is nothing to appeal.','err');
     if(app.appeal) return toast('You have already used your one appeal.','err');
-    app.appeal = { text: f.text.value.trim(), at: new Date().toISOString() };
-    app.appealStatus = 'pending';
-    saveDB();
-    toast('Appeal submitted. We will reply by email.','ok');
-    render();
+    try{
+      await LB.submitAppeal(app.id, f.text.value.trim());
+      toast('Appeal submitted. We will reply by email.','ok');
+    }catch(err){ toast(err.message,'err'); }
     return;
   }
-  if(kind==='demo-signin'){
-    const email = f.email.value.trim().toLowerCase(); const name = f.name.value.trim();
+  if(kind==='email-signin'){
+    const email = f.email.value.trim().toLowerCase();
+    const pw = f.password.value;
+    const name = f.name.value.trim();
+    const mode = (e.submitter && e.submitter.dataset.mode) || 'signin';
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('Enter a valid email address.','err');
-    signIn({ email, name:name||email.split('@')[0], picture:'' }); return;
+    const btn = e.submitter; if(btn) btn.disabled = true;
+    try{
+      if(mode === 'create'){
+        const d = await LB.signUpEmail(email, pw, name);
+        closeModal();
+        if(d && d.session){ await afterAuth(); toast('Account created — welcome!','ok'); }
+        else toast('Almost there — check your email to confirm your account, then sign in.','ok');
+      } else {
+        await LB.signInEmail(email, pw);
+        closeModal(); await afterAuth();
+        toast('Welcome back!','ok');
+      }
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
+    return;
   }
   if(kind==='apply'){
     if(!currentUser()) return openSignIn();
     if(!f.consent.checked) return toast('Please tick the confirmation box.','err');
     const children = [...document.querySelectorAll('#children [data-child]')].map(b=>({
-      id: uid(),
       name: b.querySelector('[name=childName]').value.trim(),
       dob: b.querySelector('[name=childDob]').value,
       gender: b.querySelector('[name=childGender]').value,
       program: b.querySelector('[name=childProgram]').value,
-      medical: b.querySelector('[name=childMedical]').value.trim(),
-      studentNo: null
+      medical: b.querySelector('[name=childMedical]').value.trim()
     })).filter(c=>c.name);
     if(!children.length) return toast('Please add at least one child.','err');
-    DB.apps.push({
-      id: uid(), email: SESSION.email,
-      parentName: f.parentName.value.trim(), phone: f.phone.value.trim(), altPhone: f.altPhone.value.trim(), relation: f.relation.value,
-      address:{ line1:f.line1.value.trim(), suburb:f.suburb.value.trim(), city:f.city.value.trim(), province:f.province.value, postal:f.postal.value.trim() },
-      children,
-      emergency:{ name:f.emName.value.trim(), phone:f.emPhone.value.trim() },
-      status:'pending', submittedAt:new Date().toISOString(), reviewedAt:null, reviewNote:''
-    });
-    saveDB(); toast('Application submitted for approval.','ok'); go('documents'); return;
+    const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+    try{
+      await LB.submitApplication({
+        parentName: f.parentName.value.trim(), phone: f.phone.value.trim(), altPhone: f.altPhone.value.trim(),
+        relation: f.relation.value,
+        address:{ line1:f.line1.value.trim(), suburb:f.suburb.value.trim(), city:f.city.value.trim(),
+                  province:f.province.value, postal:f.postal.value.trim() },
+        children,
+        emergency:{ name:f.emName.value.trim(), phone:f.emPhone.value.trim() }
+      });
+      toast('Application submitted for approval.','ok');
+      go('documents');
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
+    return;
   }
 });
 
@@ -1147,16 +1134,16 @@ window.addEventListener('hashchange', () => {
 document.getElementById('modal').addEventListener('click', e => { if(e.target.id==='modal') closeModal(); });
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
 
-/* keep this tab in sync when admin.html changes data in another tab */
-window.addEventListener('storage', e => {
-  if(e.key !== KEY && e.key !== SKEY) return;
-  DB = loadDB();
-  try{ SESSION = JSON.parse(localStorage.getItem(SKEY) || 'null'); }catch(err){ SESSION = null; }
-  render();
-});
+/* live sync — any device or tab that changes data pushes an update here */
+LB.onChange(function(){ applySession(); render(); });
 
-render();
-initGoogle();
+(async function boot(){
+  await LB.ready;
+  applySession();
+  render();
+  if(!LB.configured) toast('Backend not connected — add your Supabase keys to config.js.', 'err');
+  else if(LB.state && LB.state.loadError) toast(LB.state.loadError, 'err');
+})();
 </script>
 </body>
 </html>
