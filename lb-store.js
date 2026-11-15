@@ -55,7 +55,9 @@
   /* ------------------------------------------------------------------ fees */
   function fees() {
     var out = {};
-    var P = window.PROGRAMS || {};
+    /* PROGRAMS is declared with `const` in the pages, so it lives in the global
+       lexical scope, not on `window`. Try the binding first, then window. */
+    var P = (typeof PROGRAMS !== 'undefined' && PROGRAMS) ? PROGRAMS : (window.PROGRAMS || {});
     Object.keys(P).forEach(function (k) { out[k] = P[k].fee; });
     return out;
   }
