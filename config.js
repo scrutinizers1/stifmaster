@@ -12,6 +12,6 @@
    on a server.
    ============================================================================ */
 window.LB_CONFIG = {
-  supabaseUrl: "https://YOUR-PROJECT-REF.supabase.co",
-  supabaseAnonKey: "YOUR-ANON-PUBLIC-KEY"
+  supabaseUrl: "https://gbykpzdjvclheizzcint.supabase.co",
+  supabaseAnonKey: "sb_publishable_8wGDTQ7CqswS9y9-y4BncQ_fu-CpWEw"
 };
