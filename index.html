@@ -1,53 +1,1162 @@
-<!doctype html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>HornyPlayers.com/Videos</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#159a76">
+<meta name="description" content="Light Bearers Child Care Centre — enrol your child, upload your documents and pay school fees online.">
+<meta property="og:title" content="Light Bearers Child Care Centre">
+<meta property="og:description" content="A safe, loving place for your little ones. Enrol online and manage fees from anywhere.">
+<meta property="og:type" content="website">
+<title>Light Bearers Child Care Centre — Parents</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23159a76'/%3E%3Ccircle cx='32' cy='26' r='9' fill='%23ffd166'/%3E%3Cpath d='M14 46c3-8 10-13 18-13s15 5 18 13z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-
-body{color:Red;background-color:black;}
-#Hornys{color:Blue;
-paddding:20px;
-width:260px;
- border-style:solid; }
- 
-h1 {Color:Green; background-color:Black;}
-
-horny{color:orange;}
-
-players{background-color:white; color:black;}
-the{color:purple;background-color:white;}
-
-
-li{float:left;
-width:90px;
-margin:-1px;
-color:orange;
-background-color:yellow;
-font-family:Cursive
+:root{
+  --bg:#fdf8f1; --bg2:#f5ede1; --card:#ffffff; --line:#ece1d2; --line2:#e3d6c3;
+  --ink:#22303f; --muted:#6b7a8b;
+  --primary:#159a76; --primary-d:#0f7d5f; --sky:#3aa7e0; --sun:#ffb703; --coral:#ff6b6b;
+  --grad:linear-gradient(135deg,#159a76,#3aa7e0);
+  --grad2:linear-gradient(135deg,#ffb703,#ff8a3d);
+  --r:18px; --shadow:0 12px 34px rgba(34,48,63,.09); --shadow-s:0 4px 14px rgba(34,48,63,.07);
+  --safe-b:env(safe-area-inset-bottom,0px);
 }
-ul{padding:14px;
-border-style:solid;
-height:12px;
-background:linear-gradient(Red, black,gray);}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;line-height:1.5}
+h1,h2,h3,h4,.logo,.display{font-family:Nunito,Inter,sans-serif;letter-spacing:-.01em}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+img{max-width:100%}
+:focus-visible{outline:3px solid rgba(21,154,118,.45);outline-offset:2px;border-radius:10px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 
+header{position:sticky;top:0;z-index:60;background:rgba(253,248,241,.86);backdrop-filter:blur(14px) saturate(150%);-webkit-backdrop-filter:blur(14px) saturate(150%);border-bottom:1px solid var(--line)}
+.bar{max-width:1180px;margin:auto;display:flex;align-items:center;gap:14px;padding:12px 20px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:19px;white-space:nowrap;cursor:pointer}
+.logo .mark{width:38px;height:38px;border-radius:12px;background:var(--grad);display:grid;place-items:center;box-shadow:0 8px 20px rgba(21,154,118,.32);flex:0 0 auto}
+.logo .mark svg{width:22px;height:22px}
+.logo small{display:block;font-family:Inter;font-size:10.5px;font-weight:600;color:var(--muted);letter-spacing:.02em;margin-top:-2px}
+nav{margin-left:8px;display:flex;gap:2px;flex-wrap:wrap}
+nav a{padding:8px 13px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted);transition:.18s}
+nav a:hover{color:var(--ink);background:var(--bg2)}
+nav a.on{color:var(--primary-d);background:rgba(21,154,118,.1)}
+nav a .nb{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--coral);color:#fff;font-size:11px;font-weight:800;margin-left:6px;vertical-align:middle}
 
-stars{text-decoration:none;
-color:red; background:blue;}
+/* messages */
+.msg-list{display:flex;flex-direction:column;gap:14px}
+.msg{display:flex;gap:16px;padding:18px 20px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-s);position:relative}
+.msg.unread{border-color:rgba(21,154,118,.45);box-shadow:0 0 0 3px rgba(21,154,118,.08)}
+.msg.imp{background:linear-gradient(120deg,#fffaf0,#fff)}
+.msg-ico{width:46px;height:46px;border-radius:13px;background:var(--bg2);display:grid;place-items:center;font-size:22px;flex:0 0 auto}
+.msg-body{flex:1;min-width:0}
+.msg-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.msg-top b{font-family:Nunito;font-size:16px}
+.msg-cat{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg2);padding:3px 9px;border-radius:999px}
+.msg-imp{font-size:11px;font-weight:800;color:#a86a00;background:#fff5e0;padding:3px 9px;border-radius:999px}
+.msg-new{font-size:11px;font-weight:800;color:#fff;background:var(--coral);padding:3px 9px;border-radius:999px}
+.msg-body p{color:#4a5766;font-size:14.5px;margin-top:7px;line-height:1.55}
+.msg-meta{color:var(--muted);font-size:12.5px;margin-top:9px;font-weight:600}
+.spacer{margin-left:auto}
+.who{display:flex;align-items:center;gap:10px}
+.who .av{width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid #fff;box-shadow:var(--shadow-s);background:var(--grad);display:grid;place-items:center;color:#fff;font-weight:800;font-size:14px}
+.who .nm{font-size:13px;font-weight:700;line-height:1.1}
+.who .nm span{display:block;font-weight:500;color:var(--muted);font-size:11.5px}
 
-video  {background-color:yellow; width:300px; height:170; display:none;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:999px;font-weight:700;font-size:14.5px;transition:.2s;border:1px solid transparent;white-space:nowrap}
+.btn svg{width:17px;height:17px}
+.btn.p{background:var(--grad);color:#fff;box-shadow:0 10px 24px rgba(21,154,118,.28)}
+.btn.p:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(21,154,118,.34)}
+.btn.sun{background:var(--grad2);color:#5a3400;box-shadow:0 10px 24px rgba(255,138,61,.3)}
+.btn.sun:hover{transform:translateY(-2px)}
+.btn.ghost{background:var(--card);border-color:var(--line2);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--primary);color:var(--primary-d)}
+.btn.sm{padding:9px 15px;font-size:13.5px}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn.danger{background:#fff0f0;color:#c0392b;border-color:#f6cfcf}
 
-p{color:white; background:black; }
+main{max-width:1180px;margin:auto;padding:26px 20px 90px}
+.section{margin-top:44px}
+.section>h2{font-size:clamp(22px,3vw,30px);margin-bottom:6px}
+.section>p.lead{color:var(--muted);max-width:620px;margin-bottom:22px}
+.pill{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:7px 13px;border-radius:999px;background:rgba(21,154,118,.1);color:var(--primary-d);border:1px solid rgba(21,154,118,.2)}
+.pill b{width:7px;height:7px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 4px rgba(21,154,118,.18)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-s)}
 
+.hero{position:relative;overflow:hidden;border-radius:28px;padding:52px 44px;background:
+  radial-gradient(700px 320px at 88% -10%,rgba(58,167,224,.28),transparent),
+  radial-gradient(620px 360px at -5% 115%,rgba(255,183,3,.28),transparent),
+  linear-gradient(180deg,#fffdfa,#f7f0e4);
+  border:1px solid var(--line);box-shadow:var(--shadow)}
+.hero .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:34px;align-items:center;position:relative;z-index:2}
+.hero h1{font-size:clamp(30px,5vw,54px);line-height:1.03;font-weight:900;margin:16px 0 14px}
+.hero h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{color:#55636f;font-size:17px;max-width:520px}
+.hero .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:26px}
+.hero .trust{display:flex;gap:26px;margin-top:30px;flex-wrap:wrap}
+.hero .trust div b{display:block;font-family:Nunito;font-size:24px;font-weight:900;color:var(--primary-d)}
+.hero .trust div span{color:var(--muted);font-size:12.5px;font-weight:600}
+.blob{position:absolute;border-radius:50%;filter:blur(2px);opacity:.5;z-index:1}
+.b1{width:180px;height:180px;background:#ffe08a;top:-40px;right:120px}
+.b2{width:120px;height:120px;background:#a7e8d3;bottom:-30px;left:40%}
+.art{position:relative;height:320px;display:grid;place-items:center}
+.art .sun{position:absolute;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,#ffb703);box-shadow:0 20px 50px rgba(255,183,3,.45);top:6px;right:40px}
+.art .house{position:relative;z-index:3;width:230px;height:180px;background:#fff;border-radius:22px 22px 16px 16px;border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:flex-end;justify-content:center;gap:14px;padding-bottom:22px}
+.art .roof{position:absolute;top:-52px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:132px solid transparent;border-right:132px solid transparent;border-bottom:60px solid var(--primary)}
+.art .dot{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:22px;background:var(--bg2)}
+.float{position:absolute;font-size:30px;z-index:4;animation:bob 3.4s ease-in-out infinite}
+.f1{left:10px;top:40px;animation-delay:.2s}.f2{right:0;bottom:20px;animation-delay:.9s}.f3{left:40px;bottom:6px;animation-delay:1.5s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
 
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.feat{padding:24px;border-radius:var(--r)}
+.feat .ico{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;font-size:24px;background:var(--bg2);margin-bottom:14px}
+.feat h3{font-size:17px;margin-bottom:6px}
+.feat p{color:var(--muted);font-size:14.5px}
+.prog{padding:22px;border-radius:var(--r);position:relative;overflow:hidden}
+.prog .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.prog .emoji{font-size:30px}
+.prog h3{font-size:18px}
+.prog .age{color:var(--muted);font-size:13.5px;margin-top:2px}
+.prog .fee{margin-top:14px;font-family:Nunito;font-weight:900;font-size:22px;color:var(--primary-d)}
+.prog .fee small{font-family:Inter;font-weight:600;font-size:12.5px;color:var(--muted)}
+
+.fee-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow-s)}
+table{width:100%;border-collapse:collapse;min-width:520px}
+th,td{text-align:left;padding:15px 18px;font-size:14.5px;border-bottom:1px solid var(--line)}
+th{font-family:Nunito;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg2)}
+tr:last-child td{border-bottom:0}
+td.num{font-weight:700;white-space:nowrap}
+
+.plan{display:flex;gap:22px;align-items:center;flex-wrap:wrap;padding:26px;border-radius:var(--r);background:linear-gradient(120deg,#fff6e3,#fdf1f1);border:1px solid #f3e2c4;margin-top:20px}
+.plan .big{width:76px;height:76px;border-radius:20px;background:var(--grad2);display:grid;place-items:center;font-family:Nunito;font-weight:900;font-size:26px;color:#5a3400;flex:0 0 auto}
+.plan .txt{flex:1;min-width:240px}
+.plan h3{font-size:19px;margin-bottom:4px}
+.plan p{color:#6a5a44;font-size:14.5px}
+
+.form-card{padding:26px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-s)}
+.form-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.form-head .ico{width:44px;height:44px;border-radius:13px;background:var(--bg2);display:grid;place-items:center;font-size:22px}
+.form-head h2{font-size:21px}
+.form-head p{color:var(--muted);font-size:13.5px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid2 .full{grid-column:1/-1}
+label.f{display:block;font-size:13px;font-weight:700;color:#42505e}
+label.f input,label.f select,label.f textarea{display:block;width:100%;margin-top:7px;padding:12px 14px;border-radius:12px;border:1px solid var(--line2);background:#fffdfa;font:inherit;font-size:14.5px;color:var(--ink);outline:none;transition:.18s;-webkit-appearance:none;appearance:none}
+label.f textarea{min-height:80px;resize:vertical}
+label.f input:focus,label.f select:focus,label.f textarea:focus{border-color:var(--primary);box-shadow:0 0 0 4px rgba(21,154,118,.12);background:#fff}
+label.f .hint{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:5px}
+fieldset{border:0;margin:26px 0 0}
+legend{font-family:Nunito;font-weight:800;font-size:15px;color:var(--primary-d);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:#42505e;margin-top:8px}
+.check input{width:18px;height:18px;margin-top:2px;accent-color:var(--primary);flex:0 0 auto}
+.child{border:1px solid var(--line2);border-radius:14px;padding:18px;margin-bottom:14px;background:#fffdfa}
+.child-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.child-head b{font-family:Nunito;font-size:15px}
+.x{color:#c0392b;font-size:13px;font-weight:700;padding:5px 10px;border-radius:8px;background:#fff0f0}
+.x:hover{background:#ffe3e3}
+
+.doc-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.doc{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}
+.doc .hd{padding:14px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.doc .hd b{font-size:14.5px}
+.doc .hd .st{margin-left:auto;font-size:11.5px;font-weight:800;padding:4px 9px;border-radius:999px;background:var(--bg2);color:var(--muted)}
+.doc .st.ok{background:rgba(21,154,118,.12);color:var(--primary-d)}
+.doc .body{padding:16px;min-height:150px;display:grid;place-items:center;background:#fbf7f0}
+.doc .body img{max-height:220px;border-radius:10px;box-shadow:var(--shadow-s)}
+.doc .body .ph{color:var(--muted);font-size:13.5px;text-align:center}
+
+.status{border-radius:var(--r);padding:22px 24px;display:flex;gap:16px;align-items:flex-start;border:1px solid var(--line)}
+.status .ico{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;font-size:24px;flex:0 0 auto}
+.status h3{font-size:18px;margin-bottom:4px}
+.status p{color:var(--muted);font-size:14.5px}
+.status.pending{background:#fffaf0;border-color:#f3e2c4}
+.status.pending .ico{background:#fff0d1}
+.status.approved{background:#f1fbf6;border-color:#c9ecdc}
+.status.approved .ico{background:#d6f3e6}
+.status.rejected{background:#fff5f5;border-color:#f6d6d6}
+.status.rejected .ico{background:#ffe3e3}
+
+/* student card */
+.stu-card{position:relative;overflow:hidden;border-radius:20px;padding:22px;background:linear-gradient(135deg,#0f7d5f,#159a76 45%,#3aa7e0);color:#fff;box-shadow:0 18px 40px rgba(15,125,95,.28);margin-bottom:16px}
+.stu-card::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.12)}
+.stu-card::before{content:"";position:absolute;right:30px;bottom:-60px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.08)}
+.stu-top{display:flex;align-items:center;gap:12px;position:relative;z-index:2}
+.stu-top .mark{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18);display:grid;place-items:center}
+.stu-top b{font-family:Nunito;font-weight:900;font-size:16px}
+.stu-top span{display:block;font-size:11.5px;opacity:.85}
+.stu-no{margin-top:18px;position:relative;z-index:2}
+.stu-no small{font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+.stu-no b{display:block;font-family:Nunito;font-weight:900;font-size:clamp(24px,6vw,34px);letter-spacing:.04em}
+.stu-meta{display:flex;gap:22px;margin-top:16px;flex-wrap:wrap;position:relative;z-index:2}
+.stu-meta div span{display:block;font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.05em}
+.stu-meta div b{font-size:14.5px;font-weight:700}
+
+.inv{padding:20px 22px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow-s);margin-bottom:16px}
+.inv-top{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.inv-top .who2{flex:1;min-width:200px}
+.inv-top h3{font-size:17px}
+.inv-top .sub{color:var(--muted);font-size:13px;margin-top:2px}
+.tag{font-size:11.5px;font-weight:800;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.tag.unpaid{background:#fff0f0;color:#c0392b}
+.tag.partial{background:#fff5e0;color:#a86a00}
+.tag.paid{background:#e6f7ef;color:var(--primary-d)}
+.tag.plan{background:#e8f2ff;color:#1d6fb8}
+.inv-grid{display:flex;gap:26px;flex-wrap:wrap;margin:16px 0 4px;padding-top:16px;border-top:1px dashed var(--line2)}
+.inv-grid div span{display:block;font-size:12px;color:var(--muted);font-weight:600}
+.inv-grid div b{font-family:Nunito;font-size:18px;font-weight:900}
+.inv-acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.bar-prog{height:8px;border-radius:999px;background:var(--bg2);overflow:hidden;margin-top:14px}
+.bar-prog i{display:block;height:100%;background:var(--grad);border-radius:999px;transition:width .5s}
+.due{margin-top:12px;font-size:13.5px;font-weight:600;color:#1d6fb8;background:#e8f2ff;padding:10px 13px;border-radius:11px;display:flex;gap:8px;align-items:center}
+.due.warn{color:#a86a00;background:#fff5e0}
+.due.over{color:#c0392b;background:#fff0f0}
+
+.modal{position:fixed;inset:0;z-index:200;background:rgba(34,48,63,.5);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;padding:24px;overflow-y:auto}
+.modal.open{display:flex}
+.sheet{width:min(560px,100%);background:var(--card);border-radius:22px;padding:26px;box-shadow:0 30px 80px rgba(34,48,63,.35);margin:auto;animation:pop .22s ease}
+@keyframes pop{from{transform:translateY(14px) scale(.98);opacity:0}}
+.sheet h3{font-size:21px;margin-bottom:4px}
+.sheet .mut{color:var(--muted);font-size:14.5px;margin-bottom:18px}
+.sheet .close{float:right;width:34px;height:34px;border-radius:50%;background:var(--bg2);display:grid;place-items:center;font-size:18px;margin:-6px -6px 0 0}
+.note{font-size:12.5px;color:var(--muted);background:var(--bg2);padding:11px 13px;border-radius:11px;margin-top:14px;line-height:1.45}
+.pay-opt{display:flex;gap:12px;align-items:center;padding:14px;border:1px solid var(--line2);border-radius:13px;margin-bottom:10px;cursor:pointer;transition:.18s}
+.pay-opt:hover{border-color:var(--primary)}
+.pay-opt.on{border-color:var(--primary);background:rgba(21,154,118,.06);box-shadow:0 0 0 3px rgba(21,154,118,.1)}
+.pay-opt .rd{width:20px;height:20px;border-radius:50%;border:2px solid var(--line2);flex:0 0 auto;display:grid;place-items:center}
+.pay-opt.on .rd{border-color:var(--primary)}
+.pay-opt.on .rd::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--primary)}
+.pay-opt .t b{display:block;font-size:14.5px}
+.pay-opt .t span{font-size:12.5px;color:var(--muted)}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,120%);z-index:300;background:#22303f;color:#fff;padding:13px 20px;border-radius:999px;font-size:14px;font-weight:600;box-shadow:0 16px 40px rgba(0,0,0,.3);transition:transform .35s cubic-bezier(.2,.8,.2,1);display:flex;gap:9px;align-items:center;max-width:92vw}
+.toast.show{transform:translate(-50%,0)}
+.toast.ok{background:#0f7d5f}
+.toast.err{background:#c0392b}
+
+footer{border-top:1px solid var(--line);background:#fffdfa;padding:40px 20px calc(30px + var(--safe-b))}
+.foot{max-width:1180px;margin:auto;display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:26px}
+.foot h4{font-size:15px;margin-bottom:10px}
+.foot p,.foot a{color:var(--muted);font-size:13.5px;display:block;margin-bottom:7px}
+.foot a:hover{color:var(--primary-d)}
+.foot .fine{grid-column:1/-1;border-top:1px solid var(--line);margin-top:14px;padding-top:16px;color:var(--muted);font-size:12.5px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+
+.empty{text-align:center;color:var(--muted);padding:50px 20px}
+.empty .ico{font-size:40px;margin-bottom:10px}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:5px;font-family:Nunito}
+.center{text-align:center}
+.mt{margin-top:20px}.mt-s{margin-top:12px}
+.row-b{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.hr{height:1px;background:var(--line);margin:24px 0;border:0}
+
+@media (max-width:860px){
+  .hero{padding:34px 24px}
+  .hero .grid{grid-template-columns:1fr}
+  .art{display:none}
+  .grid2{grid-template-columns:1fr}
+  .doc-row{grid-template-columns:1fr}
+  .foot{grid-template-columns:1fr 1fr}
+  nav{display:none}
+  .logo small{display:none}
+}
+@media (max-width:520px){
+  .bar{padding:10px 14px;gap:10px}
+  main{padding:18px 14px 80px}
+  .who .nm{display:none}
+  .foot{grid-template-columns:1fr}
+}
+@media print{
+  header,footer,.no-print,.modal{display:none!important}
+  body{background:#fff}
+  .stu-card{box-shadow:none;break-inside:avoid}
+}
 </style>
 </head>
-
-
 <body>
 
 <header>
-<h1 align="center"><a href="thehornyplayers.html"  ><the>The</the><horny>Horny</horny><players>Mzansi</players></a></h1>
+  <div class="bar">
+    <div class="logo" data-action="go" data-route="home">
+      <span class="mark"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="4" fill="#ffd166"/><path d="M4 20c1.6-4.2 4.7-6.5 8-6.5s6.4 2.3 8 6.5z" fill="#fff"/></svg></span>
+      <span>Light Bearers<small>Child Care Centre</small></span>
+    </div>
+    <nav id="nav"></nav>
+    <div class="spacer"></div>
+    <div class="who" id="who"></div>
+  </div>
+</header>
 
+<main id="view"></main>
+
+<footer>
+  <div class="foot">
+    <div>
+      <h4>Light Bearers Child Care Centre</h4>
+      <p>A safe, loving and registered place where little ones learn, play and grow.</p>
+      <p>Mon–Fri · 06:00–17:30</p>
+    </div>
+    <div>
+      <h4>Parents</h4>
+      <a href="#programs" data-action="go" data-route="programs">Programmes</a>
+      <a href="#fees" data-action="go" data-route="fees">Fees &amp; payment plan</a>
+      <a href="#apply" data-action="go" data-route="apply">Enrol a child</a>
+      <a href="#dashboard" data-action="go" data-route="dashboard">My dashboard</a>
+    </div>
+    <div>
+      <h4>Centre</h4>
+      <a href="mailto:hello@lightbearers.co.za">hello@lightbearers.co.za</a>
+      <a href="tel:+27000000000">+27 00 000 0000</a>
+      <a href="admin.html">Staff / admin login →</a>
+    </div>
+    <div class="fine">
+      <span>© <span id="yr"></span> Light Bearers Child Care Centre. Demo portal — data is stored only in this browser.</span>
+      <span>🔒 Documents stay on your device in demo mode</span>
+    </div>
+  </div>
+</footer>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   Light Bearers Child Care Centre — PARENT portal (index.html)
+   Single file, no build step. Demo data lives in this browser's
+   localStorage and is shared with admin.html (same folder / origin).
+   ===================================================================== */
+
+const CONFIG = {
+  centre: 'Light Bearers Child Care Centre',
+  googleClientId: '',
+  yocoPublicKey: '',
+  adminPassword: 'lightbearers',
+  planDays: 60,
+  registrationFee: 350
+};
+
+const PROGRAMS = {
+  baby:      { label:'Baby Care',            age:'3 – 18 months',       fee:2200, emoji:'🍼' },
+  toddler:   { label:'Toddler Playgroup',    age:'18 months – 3 years', fee:1800, emoji:'🧸' },
+  preschool: { label:'Pre-School',           age:'3 – 5 years',         fee:1500, emoji:'🎨' },
+  aftercare: { label:'Aftercare & Homework', age:'6 – 12 years',        fee:950,  emoji:'📚' }
+};
+const PROVINCES = ['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','Northern Cape','North West','Western Cape'];
+
+const KEY = 'lightbearers_v1';
+const SKEY = 'lightbearers_session';
+
+function normalizeDB(d){
+  d = (d && typeof d === 'object') ? d : {};
+  d.users = d.users || {}; d.apps = d.apps || []; d.docs = d.docs || {};
+  d.invoices = d.invoices || []; d.settings = d.settings || {};
+  d.messages = d.messages || []; d.outbox = d.outbox || []; d.read = d.read || {};
+  return d;
+}
+function loadDB(){ try{ return normalizeDB(JSON.parse(localStorage.getItem(KEY))); }catch(e){ return normalizeDB({}); } }
+function saveDB(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ toast('Storage is full — remove an old document.', 'err'); } }
+let DB = loadDB();
+
+let SESSION = null;
+try{ SESSION = JSON.parse(localStorage.getItem(SKEY) || 'null'); }catch(e){ SESSION = null; }
+
+let route = (location.hash || '#home').slice(1);
+if(!['home','programs','fees','apply','documents','dashboard','messages'].includes(route)) route = 'home';
+
+/* ---------------- helpers ---------------- */
+function setting(k){ const v = DB.settings[k]; return (v !== undefined && v !== '') ? v : CONFIG[k]; }
+function uid(){ return Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function R(n){ return 'R' + Number(n||0).toLocaleString('en-ZA'); }
+function fmtDate(iso){ if(!iso) return '—'; return new Date(iso).toLocaleDateString('en-ZA',{day:'numeric',month:'short',year:'numeric'}); }
+function fmtPeriod(p){ const [y,m]=p.split('-'); return new Date(Number(y),Number(m)-1,1).toLocaleDateString('en-ZA',{month:'long',year:'numeric'}); }
+function daysLeft(iso){ if(!iso) return null; return Math.ceil((new Date(iso).getTime()-Date.now())/86400000); }
+function currentUser(){ return (SESSION && SESSION.email && DB.users) ? DB.users[SESSION.email] : null; }
+function initials(n){ return (n||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+function avHTML(u){ return (u && u.picture) ? `<img class="av" src="${esc(u.picture)}" alt="">` : `<span class="av">${esc(initials(u?u.name:'?'))}</span>`; }
+function latestApp(email){ const l = DB.apps.filter(a=>a.email===email); return l.length ? l[l.length-1] : null; }
+function findByStudentNo(no){
+  const q = String(no||'').trim().toUpperCase();
+  if(!q) return null;
+  for(const a of DB.apps){
+    for(const c of (a.children||[])){
+      if((c.studentNo||'').toUpperCase() === q) return { app:a, child:c };
+    }
+  }
+  return null;
+}
+const MSG_CATS = {
+  general:{ label:'General', ico:'📢' }, trip:{ label:'Trip / outing', ico:'🚌' },
+  food:{ label:'Food / menu', ico:'🍎' }, party:{ label:'Party', ico:'🎉' },
+  farewell:{ label:'Farewell', ico:'👋' }, payment:{ label:'Fees', ico:'💳' }
+};
+function msgCat(c){ return MSG_CATS[c] || MSG_CATS.general; }
+function myMessages(email){
+  const app = latestApp(email); if(!app) return [];
+  const kids = app.children || [];
+  const ids = new Set(kids.map(c=>c.id));
+  const progs = new Set(kids.map(c=>c.program));
+  return DB.messages.filter(m => m.audience==='all' || (m.audience==='programme' && progs.has(m.target)) || (m.audience==='student' && ids.has(m.target)))
+    .sort((a,b)=> (b.important?1:0)-(a.important?1:0) || new Date(b.at)-new Date(a.at));
+}
+function unreadCount(email){
+  const read = DB.read[email] || [];
+  return myMessages(email).filter(m => !read.includes(m.id)).length;
+}
+function markAllRead(email){
+  const read = DB.read[email] || [];
+  myMessages(email).forEach(m => { if(!read.includes(m.id)) read.push(m.id); });
+  DB.read[email] = read; saveDB();
+}
+function signInWithStudentNo(no){
+  const hit = findByStudentNo(no);
+  if(!hit) return toast('No learner found with that student number.','err');
+  if(hit.app.status === 'rejected') return toast('This enrolment has been dismissed. Please contact the office to appeal.','err');
+  if(hit.app.status !== 'approved') return toast('That enrolment is not approved yet.','err');
+  const email = hit.app.email;
+  DB.users[email] = DB.users[email] || { email, name:hit.app.parentName, picture:'', createdAt:new Date().toISOString() };
+  SESSION = { email };
+  localStorage.setItem(SKEY, JSON.stringify(SESSION));
+  saveDB(); closeModal();
+  toast('Welcome back, ' + (hit.app.parentName||'').split(' ')[0] + '!','ok');
+  go('dashboard');
+}
+function toast(msg, kind){
+  const t = document.getElementById('toast');
+  t.className = 'toast show ' + (kind||'');
+  t.innerHTML = (kind==='ok'?'✅ ':kind==='err'?'⚠️ ':'ℹ️ ') + esc(msg);
+  clearTimeout(t._t); t._t = setTimeout(()=>{ t.className='toast '+(kind||''); },3600);
+}
+function openModal(html){ document.getElementById('sheet').innerHTML = html; document.getElementById('modal').classList.add('open'); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function go(r){ location.hash = '#' + r; }
+
+/* ---------------- google sign-in ---------------- */
+function initGoogle(){
+  const cid = setting('googleClientId');
+  if(!cid || window.google) return;
+  const s = document.createElement('script');
+  s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.defer = true;
+  s.onload = () => {
+    try{
+      window.google.accounts.id.initialize({ client_id: cid, callback: onGoogleCredential });
+      const host = document.getElementById('gbtn');
+      if(host) window.google.accounts.id.renderButton(host, { theme:'outline', size:'large', width:320, text:'continue_with', shape:'pill' });
+    }catch(e){ console.warn(e); }
+  };
+  document.head.appendChild(s);
+}
+function parseJwt(t){
+  try{ const p=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'); return JSON.parse(decodeURIComponent(atob(p).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''))); }
+  catch(e){ return {}; }
+}
+function onGoogleCredential(res){
+  const p = parseJwt(res.credential);
+  if(!p.email) return toast('Could not read Google account.','err');
+  signIn({ email:p.email, name:p.name||p.email, picture:p.picture||'' });
+}
+function signIn(u){
+  DB.users[u.email] = Object.assign({ createdAt:new Date().toISOString() }, DB.users[u.email]||{}, u);
+  SESSION = { email:u.email };
+  localStorage.setItem(SKEY, JSON.stringify(SESSION));
+  saveDB(); closeModal();
+  toast('Welcome, ' + (u.name||u.email).split(' ')[0] + '!','ok');
+  if(route==='home') go('dashboard'); else render();
+}
+function signOut(){ SESSION=null; localStorage.removeItem(SKEY); toast('Signed out.'); go('home'); }
+function openSignIn(){
+  const hasGoogle = !!setting('googleClientId');
+  openModal(`
+    <button class="close" data-action="close-modal">✕</button>
+    <h3>Sign in</h3>
+    <p class="mut">Use your child's <b>student number</b>, or continue with Google.</p>
+    <form data-form="student-signin">
+      <label class="f">Student number
+        <input name="studentNo" placeholder="e.g. LB26-1001" required autocomplete="off" spellcheck="false" style="text-transform:uppercase;font-weight:700;letter-spacing:.04em">
+        <span class="hint">Issued when we approve your enrolment. Use it to pay fees and read notices.</span>
+      </label>
+      <button class="btn p block" style="margin-top:14px" type="submit">Enter parent portal</button>
+    </form>
+    <div style="display:flex;align-items:center;gap:10px;margin:18px 0"><span style="flex:1;height:1px;background:var(--line)"></span><span style="font-size:12px;color:var(--muted);font-weight:700">OR</span><span style="flex:1;height:1px;background:var(--line)"></span></div>
+    ${hasGoogle
+      ? `<div id="gbtn" style="display:grid;place-items:center;margin:6px 0 4px"></div>`
+      : `<form data-form="demo-signin">
+           <label class="f">New family? Sign in with email
+             <input type="email" name="email" placeholder="you@gmail.com" required autocomplete="email">
+           </label>
+           <label class="f" style="margin-top:12px">Your name
+             <input type="text" name="name" placeholder="e.g. Thandi Mokoena" required>
+           </label>
+           <button class="btn ghost block" style="margin-top:14px" type="submit">Continue with email</button>
+         </form>
+         <div class="note"><b>Demo mode.</b> Real “Sign in with Google” switches on the moment a Google Client ID is saved in <b>admin.html → Settings</b>.</div>`}
+  `);
+  if(hasGoogle) initGoogle();
+}
+
+/* ---------------- invoices ---------------- */
+function ensureInvoices(email){
+  const app = latestApp(email);
+  if(!app || app.status !== 'approved') return;
+  const period = new Date().toISOString().slice(0,7);
+  let added = false;
+  app.children.forEach(ch => {
+    if(!DB.invoices.some(i => i.email===email && i.childId===ch.id && i.period===period)){
+      const prog = PROGRAMS[ch.program] || PROGRAMS.preschool;
+      DB.invoices.push({ id:uid(), email, childId:ch.id, childName:ch.name, program:ch.program, period,
+        amount:prog.fee, paid:0, status:'unpaid', plan:false, dueDate:null, payments:[], createdAt:new Date().toISOString() });
+      added = true;
+    }
+  });
+  if(added) saveDB();
+}
+function myInvoices(email){ return DB.invoices.filter(i=>i.email===email).sort((a,b)=> a.period < b.period ? 1 : -1); }
+function recordPayment(inv, amount, method){
+  amount = Math.round(amount); if(amount<=0) return;
+  inv.payments = inv.payments || [];
+  inv.payments.push({ at:new Date().toISOString(), amount, method, ref:'LB'+Date.now().toString().slice(-7) });
+  inv.paid = (inv.paid||0) + amount;
+  if(inv.paid >= inv.amount){ inv.status='paid'; inv.plan=false; inv.dueDate=null; } else { inv.status='partial'; }
+  saveDB();
+}
+
+/* ---------------- payments ---------------- */
+function payFull(id){ openPayModal(id,'full'); }
+function payHalf(id){ openPayModal(id,'half'); }
+function payBalance(id){ openPayModal(id,'balance'); }
+function openPayModal(invId, mode){
+  const inv = DB.invoices.find(i=>i.id===invId); if(!inv) return;
+  const balance = inv.amount - (inv.paid||0);
+  let amount = balance, title='Pay in full', desc='Settle the full amount for '+fmtPeriod(inv.period)+'.';
+  if(mode==='half'){
+    const target = Math.ceil(inv.amount/2);
+    amount = Math.max(0, target-(inv.paid||0));
+    title='Pay half now';
+    desc='Pay '+R(target)+' today, then settle the other '+R(inv.amount-target)+' within '+setting('planDays')+' days.';
+  } else if(mode==='balance'){ title='Pay outstanding balance'; desc='Clear the remaining balance on this invoice.'; }
+  const yoco = setting('yocoPublicKey');
+  openModal(`
+    <button class="close" data-action="close-modal">✕</button>
+    <h3>${esc(title)}</h3>
+    <p class="mut">${esc(inv.childName)} · ${esc(PROGRAMS[inv.program]?PROGRAMS[inv.program].label:'')} · ${esc(fmtPeriod(inv.period))}</p>
+    <div class="card" style="padding:16px 18px;margin-bottom:16px">
+      <div class="row-b" style="justify-content:space-between"><span style="color:var(--muted);font-size:13.5px">Amount due now</span><b style="font-family:Nunito;font-size:24px;font-weight:900">${R(amount)}</b></div>
+      <div class="note" style="margin-top:12px">${esc(desc)}</div>
+    </div>
+    <div class="pay-opt on" data-method="Card (Yoco)"><span class="rd"></span><span class="t"><b>Card / EFT — Yoco</b><span>Secure checkout · instant receipt</span></span></div>
+    <div class="pay-opt" data-method="Cash at centre"><span class="rd"></span><span class="t"><b>Cash at the centre</b><span>Recorded as paid once the office confirms</span></span></div>
+    <button class="btn p block" style="margin-top:18px" data-action="confirm-payment" data-inv="${esc(inv.id)}" data-mode="${esc(mode)}" data-amount="${amount}">Pay ${R(amount)}</button>
+    <div class="note">${yoco ? 'Yoco is connected. In live mode this opens the Yoco checkout.' : 'Yoco is not connected yet — this demo records the payment instantly. Add a Yoco public key in admin.html → Settings.'}</div>
+  `);
+  document.querySelectorAll('#sheet .pay-opt').forEach(el=>{ el.onclick = () => { document.querySelectorAll('#sheet .pay-opt').forEach(x=>x.classList.remove('on')); el.classList.add('on'); }; });
+}
+function confirmPayment(invId, mode, amount){
+  const inv = DB.invoices.find(i=>i.id===invId); if(!inv) return;
+  const on = document.querySelector('#sheet .pay-opt.on');
+  const method = on ? on.dataset.method : 'Card (Yoco)';
+  amount = Number(amount)||0;
+  const btn = document.querySelector('[data-action="confirm-payment"]');
+  if(btn){ btn.disabled = true; btn.textContent = 'Processing…'; }
+  setTimeout(()=>{
+    recordPayment(inv, amount, method);
+    if(mode==='half'){ inv.plan = true; inv.dueDate = new Date(Date.now()+setting('planDays')*86400000).toISOString(); saveDB(); }
+    closeModal(); toast('Payment of '+R(amount)+' received. Thank you!','ok'); render();
+  }, 850);
+}
+
+/* ---------------- uploads ---------------- */
+function compressImage(file, max, q){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w=img.width,h=img.height; const s=Math.min(1,max/Math.max(w,h));
+        w=Math.round(w*s); h=Math.round(h*s);
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',q));
+      };
+      img.onerror = reject; img.src = r.result;
+    };
+    r.onerror = reject; r.readAsDataURL(file);
+  });
+}
+async function handleUpload(kind, file){
+  if(!file) return;
+  if(file.size > 6*1024*1024) return toast('File is too big (max 6 MB).','err');
+  const email = SESSION.email;
+  DB.docs[email] = DB.docs[email] || {};
+  try{
+    let dataUrl;
+    if(file.type.startsWith('image/')) dataUrl = await compressImage(file, 1100, .72);
+    else if(file.type === 'application/pdf') dataUrl = await new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(r.result); r.onerror=rej; r.readAsDataURL(file); });
+    else return toast('Please upload a JPG, PNG or PDF.','err');
+    DB.docs[email][kind] = { name:file.name, type:file.type, dataUrl, at:new Date().toISOString() };
+    saveDB(); toast('Document uploaded.','ok'); render();
+  }catch(e){ toast('Could not read that file.','err'); }
+}
+
+/* =================== VIEWS =================== */
+function viewHome(){
+  return `
+  <section class="hero">
+    <span class="blob b1"></span><span class="blob b2"></span>
+    <div class="grid">
+      <div>
+        <span class="pill"><b></b> Enrolling now · limited spaces</span>
+        <h1>A happy, safe place for your <span>little ones</span> to grow.</h1>
+        <p class="sub">Light Bearers is a registered child care centre. Enrol online in minutes, upload your documents, and pay school fees from anywhere — including paying half now and settling the rest later.</p>
+        <div class="cta-row">
+          <button class="btn p" data-action="start-apply">Enrol a child
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+          <button class="btn ghost" data-action="go" data-route="fees">See fees &amp; plans</button>
+        </div>
+        <div class="trust">
+          <div><b>18</b><span>Years caring</span></div>
+          <div><b>240+</b><span>Happy families</span></div>
+          <div><b>1:6</b><span>Carer to child</span></div>
+          <div><b>06:00</b><span>Early drop-off</span></div>
+        </div>
+      </div>
+      <div class="art">
+        <span class="sun"></span>
+        <span class="float f1">🎈</span><span class="float f2">🧸</span><span class="float f3">🖍️</span>
+        <div class="house"><span class="roof"></span><span class="dot">🧒</span><span class="dot">👶</span><span class="dot">👧</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Why parents choose us</h2>
+    <p class="lead">Everything your child needs to feel at home, and everything you need to feel at ease.</p>
+    <div class="grid3">
+      <div class="card feat"><div class="ico">🛡️</div><h3>Safe &amp; registered</h3><p>Vetted, trained carers, secure premises and strict pick-up rules. Only approved guardians may collect.</p></div>
+      <div class="card feat"><div class="ico">🌱</div><h3>Learn through play</h3><p>Age-based programmes that build language, numbers and confidence in a warm, structured day.</p></div>
+      <div class="card feat"><div class="ico">🍎</div><h3>Meals included</h3><p>Balanced breakfast, lunch and snacks prepared fresh on site, with allergy care for every child.</p></div>
+      <div class="card feat"><div class="ico">📱</div><h3>Everything online</h3><p>Apply, upload documents and pay fees from your phone — no queues at the office.</p></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>Our programmes</h2>
+    <p class="lead">Pick the group that fits your child's age.</p>
+    <div class="grid3">
+      ${Object.values(PROGRAMS).map(p=>`
+        <div class="card prog">
+          <div class="top"><span class="emoji">${p.emoji}</span><span class="pill">${esc(p.age)}</span></div>
+          <h3>${esc(p.label)}</h3>
+          <div class="fee">${R(p.fee)}<small> / month</small></div>
+        </div>`).join('')}
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>How it works</h2>
+    <p class="lead">From application to first day, in four simple steps.</p>
+    <div class="grid3">
+      <div class="card feat"><div class="ico">1️⃣</div><h3>Sign in</h3><p>Continue with your Google account so we can match you to your family profile.</p></div>
+      <div class="card feat"><div class="ico">2️⃣</div><h3>Fill the form</h3><p>Give us your real name, full address and your child's details.</p></div>
+      <div class="card feat"><div class="ico">3️⃣</div><h3>Upload documents</h3><p>Send a copy of your ID and a proof of address for verification.</p></div>
+      <div class="card feat"><div class="ico">4️⃣</div><h3>Get approved &amp; pay</h3><p>We review your application and issue your child's student number. Then pay online — or half now, rest later.</p></div>
+    </div>
+    <div class="plan">
+      <div class="big">50%</div>
+      <div class="txt">
+        <h3>Pay half now, settle the rest in ${setting('planDays')} days</h3>
+        <p>Short on cash this month? Pay 50% of the fees to secure your child's place, and we give you ${setting('planDays')} days to pay the balance — with no interest.</p>
+      </div>
+      <button class="btn sun" data-action="start-apply">Start enrolment</button>
+    </div>
+  </section>`;
+}
+
+function programBlurb(k){
+  return {
+    baby:'Gentle routines, tummy time, naps and lots of cuddles in a calm, clean baby room.',
+    toddler:'Songs, stories, messy play and first friendships that build confidence and speech.',
+    preschool:'Early literacy, numbers, art and school-readiness with a daily structured programme.',
+    aftercare:'A safe space after school for homework help, a hot meal and supervised play until 17:30.'
+  }[k] || '';
+}
+function viewPrograms(){
+  return `
+  <section class="section" style="margin-top:8px">
+    <span class="pill"><b></b> Programmes</span>
+    <h2 style="margin-top:12px">A place for every age</h2>
+    <p class="lead">Small groups, qualified carers and a day built around play, rest and learning.</p>
+    <div class="grid3">
+      ${Object.entries(PROGRAMS).map(([k,p])=>`
+        <div class="card prog">
+          <div class="top"><span class="emoji">${p.emoji}</span><span class="pill">${esc(p.age)}</span></div>
+          <h3>${esc(p.label)}</h3>
+          <p style="color:var(--muted);font-size:14px;margin-top:8px">${esc(programBlurb(k))}</p>
+          <div class="fee">${R(p.fee)}<small> / month</small></div>
+        </div>`).join('')}
+    </div>
+    <div class="center" style="margin-top:32px"><button class="btn p" data-action="start-apply">Enrol a child now</button></div>
+  </section>`;
+}
+
+function viewFees(){
+  return `
+  <section class="section" style="margin-top:8px">
+    <span class="pill"><b></b> Fees</span>
+    <h2 style="margin-top:12px">Clear, simple fees</h2>
+    <p class="lead">No hidden costs. Fees cover meals, learning materials and full-day care.</p>
+    <div class="fee-wrap">
+      <table>
+        <thead><tr><th>Programme</th><th>Age group</th><th>Monthly fee</th></tr></thead>
+        <tbody>
+          ${Object.values(PROGRAMS).map(p=>`<tr><td><b>${esc(p.label)}</b></td><td>${esc(p.age)}</td><td class="num">${R(p.fee)}</td></tr>`).join('')}
+          <tr><td><b>Once-off registration</b></td><td>All new children</td><td class="num">${R(setting('registrationFee'))}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="plan">
+      <div class="big">50%</div>
+      <div class="txt">
+        <h3>The half-payment plan</h3>
+        <p>Pay <b>half the monthly fee</b> today to keep your child's place. The other half is due within <b>${setting('planDays')} days</b> — interest-free. Your dashboard shows exactly how many days are left and lets you settle the balance any time.</p>
+      </div>
+    </div>
+    <div class="grid3" style="margin-top:20px">
+      <div class="card feat"><div class="ico">💳</div><h3>Pay online</h3><p>Card or EFT through Yoco, straight from your dashboard. A receipt is saved to your account.</p></div>
+      <div class="card feat"><div class="ico">🧾</div><h3>Always a record</h3><p>Every payment is listed with a reference number you can hand to the office.</p></div>
+      <div class="card feat"><div class="ico">💬</div><h3>Need help?</h3><p>Struggling with fees? Talk to us — arrangements can be made for genuine hardship.</p></div>
+    </div>
+    <div class="center" style="margin-top:32px"><button class="btn p" data-action="start-apply">Enrol a child</button></div>
+  </section>`;
+}
+
+function childBlockHTML(i){
+  return `
+  <div class="child" data-child>
+    <div class="child-head"><b>Child ${i}</b><button type="button" class="x" data-action="remove-child">Remove</button></div>
+    <div class="grid2">
+      <label class="f">Full name<input name="childName" required placeholder="Child's full name"></label>
+      <label class="f">Date of birth<input type="date" name="childDob" required></label>
+      <label class="f">Gender<select name="childGender"><option>Girl</option><option>Boy</option><option>Prefer not to say</option></select></label>
+      <label class="f">Programme<select name="childProgram">${Object.entries(PROGRAMS).map(([k,p])=>`<option value="${k}">${esc(p.label)} — ${esc(p.age)}</option>`).join('')}</select></label>
+      <label class="f full">Allergies / medical notes<textarea name="childMedical" placeholder="Anything we must know (allergies, medication, special needs)"></textarea></label>
+    </div>
+  </div>`;
+}
+
+function viewApply(){
+  const user = currentUser();
+  if(!user) return viewGate('Enrol a child','Sign in with your Google account to fill in the enrolment form.');
+  const app = latestApp(user.email);
+  if(app && app.status === 'rejected') return viewDismissed(app);
+  if(app){
+    return `
+    <section class="section" style="margin-top:8px">
+      <h2>Enrolment</h2>
+      <p class="lead">You already have an application with us.</p>
+      ${statusCard(app)}
+      <div class="row-b mt">
+        <button class="btn p" data-action="go" data-route="documents">Upload / view documents</button>
+        <button class="btn ghost" data-action="go" data-route="dashboard">Go to dashboard</button>
+      </div>
+    </section>`;
+  }
+  return `
+  <section class="section" style="margin-top:8px">
+    <span class="pill"><b></b> Enrolment form</span>
+    <h2 style="margin-top:12px">Enrol your child</h2>
+    <p class="lead">Please use your real name and full residential address. We verify every application before approving.</p>
+    <form class="form-card" data-form="apply">
+      <div class="form-head"><div class="ico">👨‍👩‍👧</div><div><h2>Parent / guardian</h2><p>Signed in as ${esc(user.email)}</p></div></div>
+      <div class="grid2">
+        <label class="f">Full name (as on your ID)<input name="parentName" required placeholder="e.g. Thandi Mokoena" value="${esc(user.name||'')}"></label>
+        <label class="f">Mobile number<input name="phone" required placeholder="072 000 0000" inputmode="tel"></label>
+        <label class="f">Alternative number <span class="hint" style="display:inline">(optional)</span><input name="altPhone" placeholder="072 000 0000" inputmode="tel"></label>
+        <label class="f">Relationship to child<select name="relation"><option>Mother</option><option>Father</option><option>Guardian</option><option>Grandparent</option><option>Other</option></select></label>
+      </div>
+      <fieldset>
+        <legend>🏠 Full residential address</legend>
+        <div class="grid2">
+          <label class="f full">Street address<input name="line1" required placeholder="12 Acacia Street"></label>
+          <label class="f">Suburb<input name="suburb" required placeholder="Extension 4"></label>
+          <label class="f">City / Town<input name="city" required placeholder="Johannesburg"></label>
+          <label class="f">Province<select name="province" required>${PROVINCES.map(p=>`<option>${p}</option>`).join('')}</select></label>
+          <label class="f">Postal code<input name="postal" required placeholder="2001" inputmode="numeric"></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>🧒 Children to enrol</legend>
+        <div id="children">${childBlockHTML(1)}</div>
+        <button type="button" class="btn ghost sm" data-action="add-child">➕ Add another child</button>
+      </fieldset>
+      <fieldset>
+        <legend>🚑 Emergency contact</legend>
+        <div class="grid2">
+          <label class="f">Contact name<input name="emName" required placeholder="e.g. Sipho Dlamini"></label>
+          <label class="f">Contact number<input name="emPhone" required placeholder="072 000 0000" inputmode="tel"></label>
+        </div>
+      </fieldset>
+      <label class="check mt"><input type="checkbox" name="consent" required><span>I confirm the information is true and correct, and I agree to the centre's rules and to being contacted about this application.</span></label>
+      <button class="btn p block" style="margin-top:22px" type="submit">Submit application for approval</button>
+      <div class="note">After submitting, upload a copy of your ID and a proof of address. We approve applications manually — usually within 1–2 working days.</div>
+    </form>
+  </section>`;
+}
+
+function viewDocuments(){
+  const user = currentUser();
+  if(!user) return viewGate('Documents','Sign in to upload your ID and proof of address.');
+  const docs = DB.docs[user.email] || {};
+  const app = latestApp(user.email);
+  const slot = (kind, title, tip) => {
+    const d = docs[kind];
+    return `
+    <div class="doc">
+      <div class="hd"><span>${kind==='id'?'🪪':'🏠'}</span><b>${esc(title)}</b><span class="st ${d?'ok':''}">${d?'Uploaded':'Required'}</span></div>
+      <div class="body">
+        ${d ? (d.type==='application/pdf'
+            ? `<div class="ph">📄 ${esc(d.name)}<br><a class="btn ghost sm" style="margin-top:10px" href="${d.dataUrl}" target="_blank" rel="noopener">Open PDF</a></div>`
+            : `<img src="${d.dataUrl}" alt="${esc(title)}">`)
+          : `<div class="ph">${esc(tip)}</div>`}
+      </div>
+      <div style="padding:14px 16px;border-top:1px solid var(--line)">
+        <input type="file" id="file-${kind}" accept="image/*,application/pdf" style="display:none">
+        <button class="btn ghost sm block" data-action="pick-file" data-kind="${kind}">${d?'Replace file':'Choose file'}</button>
+        ${d?`<div style="font-size:12px;color:var(--muted);margin-top:9px;text-align:center">Uploaded ${esc(fmtDate(d.at))}</div>`:''}
+      </div>
+    </div>`;
+  };
+  return `
+  <section class="section" style="margin-top:8px">
+    <span class="pill"><b></b> Documents</span>
+    <h2 style="margin-top:12px">ID &amp; proof of address</h2>
+    <p class="lead">We need these to verify every child before their first day. Your files are kept on your own device in demo mode.</p>
+    ${app ? statusCard(app,true) : `<div class="status pending" style="margin-bottom:20px"><div class="ico">📝</div><div><h3>No application yet</h3><p>Please <a href="#apply" data-action="go" data-route="apply" style="color:var(--primary-d);font-weight:700">fill in the enrolment form</a> first, then upload your documents here.</p></div></div>`}
+    <div class="doc-row mt">${slot('id','Copy of parent / guardian ID','Upload a clear photo of your ID card or smart-card page.')}${slot('address','Proof of address','A recent bill, bank statement or lease (not older than 3 months).')}</div>
+  </section>`;
+}
+
+function studentCardHTML(child, app){
+  return `
+  <div class="stu-card">
+    <div class="stu-top">
+      <span class="mark"><svg viewBox="0 0 24 24" width="22" height="22" fill="none"><circle cx="12" cy="9" r="4" fill="#ffd166"/><path d="M4 20c1.6-4.2 4.7-6.5 8-6.5s6.4 2.3 8 6.5z" fill="#fff"/></svg></span>
+      <div><b>${esc(CONFIG.centre)}</b><span>Learner card · ${new Date().getFullYear()}</span></div>
+    </div>
+    <div class="stu-no"><small>Student number</small><b>${esc(child.studentNo || 'Pending')}</b></div>
+    <div class="stu-meta">
+      <div><span>Learner</span><b>${esc(child.name)}</b></div>
+      <div><span>Programme</span><b>${esc(PROGRAMS[child.program]?PROGRAMS[child.program].label:'')}</b></div>
+      <div><span>Guardian</span><b>${esc(app.parentName)}</b></div>
+    </div>
+  </div>`;
+}
+
+function viewDashboard(){
+  const user = currentUser();
+  if(!user) return viewGate('My dashboard','Sign in with your Google account to see your enrolment and fees.');
+  if(isDismissed()) return viewLocked();
+  const app = latestApp(user.email);
+  ensureInvoices(user.email);
+  const invoices = myInvoices(user.email);
+  const docs = DB.docs[user.email] || {};
+  const outstanding = invoices.reduce((s,i)=> s + (i.amount - i.paid), 0);
+  const nextDue = invoices.filter(i=>i.plan && i.dueDate).sort((a,b)=> new Date(a.dueDate)-new Date(b.dueDate))[0];
+
+  return `
+  <section class="section" style="margin-top:8px">
+    <div class="row-b" style="justify-content:space-between">
+      <div><span class="pill"><b></b> Parent dashboard</span><h2 style="margin-top:12px">Hello, ${esc((user.name||'there').split(' ')[0])} 👋</h2></div>
+      <div class="row-b no-print">${avHTML(user)}<button class="btn ghost sm" data-action="signout">Sign out</button></div>
+    </div>
+
+    ${app ? statusCard(app) : `
+      <div class="status pending" style="margin-top:20px"><div class="ico">📝</div><div><h3>No application yet</h3><p>Start your enrolment and we'll review it within 1–2 working days.</p><button class="btn p sm" style="margin-top:14px" data-action="start-apply">Enrol a child</button></div></div>`}
+
+    ${app && app.status==='approved' ? `
+      <h2 style="margin-top:32px;font-size:22px">Student numbers</h2>
+      <p class="lead">Quote these at the office, on the phone or when paying. Keep them safe.</p>
+      ${app.children.map(c => studentCardHTML(c, app)).join('')}
+      <div class="no-print"><button class="btn ghost sm" onclick="window.print()">🖨️ Print learner card${app.children.length>1?'s':''}</button></div>` : ''}
+
+    <div class="grid3 mt">
+      <div class="card feat"><div class="ico">🧒</div><h3>${app?app.children.length:0} child${app&&app.children.length===1?'':'ren'}</h3><p>${app?esc(app.children.map(c=>c.name).join(', ')):'No children enrolled yet.'}</p></div>
+      <div class="card feat"><div class="ico">💰</div><h3>${R(outstanding)}</h3><p>Outstanding fees across all invoices.</p></div>
+      <div class="card feat"><div class="ico">📎</div><h3>${(docs.id?1:0)+(docs.address?1:0)}/2</h3><p>Documents uploaded. ${(!docs.id||!docs.address)?'Upload your ID and proof of address.':'All documents received.'}</p></div>
+    </div>
+
+    ${app && app.status==='approved' ? (()=>{
+      const ms = myMessages(user.email).slice(0,3); const rd = DB.read[user.email] || [];
+      if(!ms.length) return '';
+      const un = unreadCount(user.email);
+      return `<div class="row-b" style="justify-content:space-between;margin-top:34px">
+        <h2 style="font-size:22px">Latest notices</h2>
+        <button class="btn ghost sm" data-action="go" data-route="messages">All messages${un?' ('+un+')':''}</button>
+      </div>
+      <div class="msg-list" style="margin-top:14px">${ms.map(m=>msgCard(m, !rd.includes(m.id))).join('')}</div>`;
+    })() : ''}
+
+    ${nextDue ? `<div class="due ${daysLeft(nextDue.dueDate)<0?'over':daysLeft(nextDue.dueDate)<=14?'warn':''}" style="margin-top:20px;font-size:14.5px">⏳ You have <b style="margin:0 4px">${Math.max(0,daysLeft(nextDue.dueDate))} day${daysLeft(nextDue.dueDate)===1?'':'s'}</b> left to settle ${R(nextDue.amount-nextDue.paid)} for ${esc(nextDue.childName)} (due ${esc(fmtDate(nextDue.dueDate))}).</div>` : ''}
+
+    ${!app || app.status!=='approved' ? `<div class="card" style="padding:22px;margin-top:20px"><h3 style="font-size:17px">Fees</h3><p style="color:var(--muted);font-size:14.5px;margin-top:6px">Once your application is approved, your monthly invoices will appear here and you'll be able to pay online or set up the half-payment plan.</p></div>` : ''}
+
+    ${invoices.length ? `
+      <h2 style="margin-top:36px;font-size:22px">Invoices &amp; payments</h2>
+      <p class="lead">Pay in full, or pay half now and settle the rest within ${setting('planDays')} days.</p>
+      ${invoices.map(inv=>invoiceCard(inv)).join('')}` : ''}
+  </section>`;
+}
+
+function statusCard(app, compact){
+  const map = {
+    pending:  { cls:'pending',  ico:'⏳', t:'Application under review', p:'Thank you! We are checking your details and documents. We approve applications manually — usually within 1–2 working days.' },
+    approved: { cls:'approved', ico:'✅', t:'Approved — welcome to Light Bearers!', p:'Your child is enrolled and has a student number below. You can pay in full, or pay half now and settle the rest within ' + setting('planDays') + ' days.' },
+    rejected: { cls:'rejected', ico:'❌', t:'Application not approved', p:'Please review the note below and submit a new application.' }
+  };
+  const s = map[app.status];
+  return `
+  <div class="status ${s.cls}" style="${compact?'margin-bottom:6px':'margin-top:20px'}">
+    <div class="ico">${s.ico}</div>
+    <div style="flex:1">
+      <h3>${s.t}</h3>
+      <p>${esc(app.reviewNote && app.status==='rejected' ? app.reviewNote : s.p)}</p>
+      <p style="margin-top:8px;font-size:13px">Submitted ${esc(fmtDate(app.submittedAt))}${app.reviewedAt?' · Reviewed '+esc(fmtDate(app.reviewedAt)):''}</p>
+    </div>
+  </div>`;
+}
+
+function invoiceCard(inv){
+  const balance = inv.amount - inv.paid;
+  const pct = Math.min(100, Math.round((inv.paid/inv.amount)*100));
+  const dLeft = inv.plan && inv.dueDate ? daysLeft(inv.dueDate) : null;
+  return `
+  <div class="inv">
+    <div class="inv-top">
+      <div class="who2"><h3>${esc(inv.childName)}</h3><div class="sub">${esc(PROGRAMS[inv.program]?PROGRAMS[inv.program].label:'')} · ${esc(fmtPeriod(inv.period))}</div></div>
+      <span class="tag ${inv.status}">${inv.status==='unpaid'?'Unpaid':inv.status==='partial'?'Part paid':'Paid'}</span>
+      ${inv.plan?`<span class="tag plan">${setting('planDays')}-day plan</span>`:''}
+    </div>
+    <div class="inv-grid">
+      <div><span>Total</span><b>${R(inv.amount)}</b></div>
+      <div><span>Paid</span><b>${R(inv.paid)}</b></div>
+      <div><span>Balance</span><b style="color:${balance>0?'#c0392b':'var(--primary-d)'}">${R(balance)}</b></div>
+    </div>
+    <div class="bar-prog"><i style="width:${pct}%"></i></div>
+    ${inv.plan && inv.dueDate ? `<div class="due ${dLeft<0?'over':dLeft<=14?'warn':''}">⏳ ${dLeft<0?'Was due '+esc(fmtDate(inv.dueDate)):dLeft+' day'+(dLeft===1?'':'s')+' left to settle '+R(balance)+' (due '+esc(fmtDate(inv.dueDate))+')'}</div>` : ''}
+    ${balance>0 ? `<div class="inv-acts no-print">
+        <button class="btn p sm" data-action="pay-full" data-inv="${esc(inv.id)}">Pay ${R(balance)} in full</button>
+        ${inv.paid===0?`<button class="btn sun sm" data-action="pay-half" data-inv="${esc(inv.id)}">Pay half now (${R(Math.ceil(inv.amount/2))})</button>`:''}
+        ${inv.paid>0?`<button class="btn sun sm" data-action="pay-balance" data-inv="${esc(inv.id)}">Settle balance</button>`:''}
+      </div>` : ''}
+    ${inv.payments && inv.payments.length ? `<div style="margin-top:14px;border-top:1px dashed var(--line2);padding-top:12px">${inv.payments.map(p=>`<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--muted);padding:3px 0"><span>${esc(fmtDate(p.at))} · ${esc(p.method)} · <b style="color:#42505e">${esc(p.ref)}</b></span><b style="color:var(--ink)">${R(p.amount)}</b></div>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function isDismissed(){
+  const u = currentUser(); if(!u) return false;
+  const a = latestApp(u.email);
+  return !!(a && a.status === 'rejected');
+}
+function viewLocked(){
+  return `
+  <section class="section" style="margin-top:8px">
+    <div class="status rejected" style="max-width:640px;margin:auto">
+      <div class="ico">🔒</div>
+      <div style="flex:1">
+        <h3>Portal access disabled</h3>
+        <p>This enrolment has been dismissed, so the parent portal is locked. You cannot pay fees or read messages until the office undismisses it.</p>
+        <div class="row-b" style="margin-top:16px">
+          <button class="btn p sm" data-action="go" data-route="apply">Go to my appeal</button>
+          <a class="btn ghost sm" href="mailto:hello@lightbearers.co.za">Contact the office</a>
+        </div>
+      </div>
+    </div>
+  </section>`;
+}
+function viewDismissed(app){
+  const appealed = !!app.appeal;
+  return `
+  <section class="section" style="margin-top:8px">
+    <div class="status rejected">
+      <div class="ico">🚫</div>
+      <div style="flex:1">
+        <h3>Application dismissed</h3>
+        <p>${esc(app.reviewNote || 'Your enrolment application was not approved.')}</p>
+        <p style="margin-top:8px;font-size:13px">Dismissed ${esc(fmtDate(app.reviewedAt))}</p>
+      </div>
+    </div>
+    ${appealed ? `
+      <div class="card" style="padding:24px;margin-top:20px;max-width:640px">
+        <h3 style="font-size:17px">Appeal submitted</h3>
+        <p style="color:var(--muted);font-size:14px;margin-top:6px">You submitted your one appeal on ${esc(fmtDate(app.appeal.at))}. The office will review it and reply by email.</p>
+        <div class="note" style="white-space:pre-wrap">${esc(app.appeal.text)}</div>
+        <div class="note">Only one appeal is allowed per application. ${app.appealStatus==='declined'?'The dismissal was upheld — this decision is final.':app.appealStatus==='accepted'?'Your appeal was accepted — the portal is active again.':'We will be in touch.'}</div>
+      </div>` : `
+      <form class="form-card" style="margin-top:20px;max-width:640px" data-form="appeal">
+        <div class="form-head"><div class="ico">⚖️</div><div><h2>Appeal this decision</h2><p>You may appeal <b>once</b>. Please explain clearly.</p></div></div>
+        <label class="f">Why should we reconsider?
+          <textarea name="text" required style="min-height:120px" placeholder="Tell us what changed, or what we may have missed…"></textarea>
+        </label>
+        <button class="btn p block" style="margin-top:18px" type="submit">Submit my one appeal</button>
+        <div class="note"><b>Important:</b> you can only appeal once. After you submit, the office's decision is final and the portal stays locked until they undismiss it.</div>
+      </form>`}
+  </section>`;
+}
+
+function msgCard(m, unread){
+  const c = msgCat(m.category);
+  return `
+  <div class="msg ${unread?'unread':''} ${m.important?'imp':''}">
+    <div class="msg-ico">${c.ico}</div>
+    <div class="msg-body">
+      <div class="msg-top"><b>${esc(m.title)}</b><span class="msg-cat">${esc(c.label)}</span>${m.important?'<span class="msg-imp">Important</span>':''}${unread?'<span class="msg-new">New</span>':''}</div>
+      <p>${esc(m.body).replace(/\n/g,'<br>')}</p>
+      <div class="msg-meta">${esc(fmtDate(m.at))}${m.author?' · '+esc(m.author):''}</div>
+    </div>
+  </div>`;
+}
+function viewMessages(){
+  const user = currentUser();
+  if(!user) return viewGate('Messages','Sign in to read notices from the centre.');
+  if(isDismissed()) return viewLocked();
+  const msgs = myMessages(user.email);
+  const read = DB.read[user.email] || [];
+  const unread = msgs.filter(m=>!read.includes(m.id)).length;
+  return `
+  <section class="section" style="margin-top:8px">
+    <div class="row-b" style="justify-content:space-between">
+      <div>
+        <span class="pill"><b></b> Messages</span>
+        <h2 style="margin-top:12px">Notices from Light Bearers</h2>
+        <p class="lead">Trips, menu changes, parties, farewells and everything else you need to know.</p>
+      </div>
+      ${unread?`<button class="btn ghost sm" data-action="mark-read">Mark all as read (${unread})</button>`:''}
+    </div>
+    ${msgs.length
+      ? `<div class="msg-list">${msgs.map(m=>msgCard(m, !read.includes(m.id))).join('')}</div>`
+      : `<div class="empty"><div class="ico">📭</div><b>No messages yet</b>Notices from the centre will appear here.</div>`}
+  </section>`;
+}
+
+function viewGate(title,msg){
+  return `
+  <section class="section" style="margin-top:8px">
+    <div class="card center" style="padding:52px 26px;max-width:520px;margin:auto">
+      <div style="font-size:44px;margin-bottom:12px">🔐</div>
+      <h2>${esc(title)}</h2>
+      <p style="color:var(--muted);margin:10px 0 22px">${esc(msg)}</p>
+      <button class="btn p" data-action="signin">Continue with Google</button>
+    </div>
+  </section>`;
+}
+
+/* =================== render + events =================== */
+function renderNav(){
+  const items = [['home','Home'],['programs','Programmes'],['fees','Fees'],['apply','Enrol'],['dashboard','My dashboard'],['messages','Messages']];
+  const unread = currentUser() ? unreadCount(SESSION.email) : 0;
+  document.getElementById('nav').innerHTML = items.map(([r,l]) =>
+    `<a href="#${r}" data-action="go" data-route="${r}" class="${route===r?'on':''}">${l}${r==='messages'&&unread?`<span class="nb">${unread}</span>`:''}</a>`).join('');
+}
+function renderWho(){
+  const user = currentUser();
+  const who = document.getElementById('who');
+  if(user) who.innerHTML = `${avHTML(user)}<span class="nm">${esc((user.name||'').split(' ')[0]||'Parent')}<span>Parent</span></span><button class="btn ghost sm" data-action="go" data-route="dashboard">Dashboard</button>`;
+  else who.innerHTML = `<button class="btn p sm" data-action="signin">Sign in with Google</button>`;
+}
+function render(){
+  renderNav(); renderWho();
+  const map = { home:viewHome, programs:viewPrograms, fees:viewFees, apply:viewApply, documents:viewDocuments, dashboard:viewDashboard, messages:viewMessages };
+  document.getElementById('view').innerHTML = (map[route]||viewHome)();
+  window.scrollTo(0,0);
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-action]'); if(!el) return;
+  switch(el.dataset.action){
+    case 'go': e.preventDefault(); go(el.dataset.route); break;
+    case 'signin': openSignIn(); break;
+    case 'signout': signOut(); break;
+    case 'close-modal': closeModal(); break;
+    case 'start-apply': if(!currentUser()){ toast('Please sign in first.'); openSignIn(); } else go('apply'); break;
+    case 'add-child': { const box=document.getElementById('children'); if(!box) break; box.insertAdjacentHTML('beforeend', childBlockHTML(box.querySelectorAll('[data-child]').length+1)); break; }
+    case 'remove-child': { const box=document.getElementById('children'); if(box && box.querySelectorAll('[data-child]').length>1) el.closest('[data-child]').remove(); else toast('At least one child is required.'); break; }
+    case 'pick-file': document.getElementById('file-'+el.dataset.kind).click(); break;
+    case 'pay-full': payFull(el.dataset.inv); break;
+    case 'pay-half': payHalf(el.dataset.inv); break;
+    case 'pay-balance': payBalance(el.dataset.inv); break;
+    case 'confirm-payment': confirmPayment(el.dataset.inv, el.dataset.mode, el.dataset.amount); break;
+    case 'mark-read': markAllRead(SESSION.email); render(); break;
+  }
+});
+document.addEventListener('change', e => {
+  const inp = e.target;
+  if(inp.type==='file' && inp.id && inp.id.startsWith('file-')) handleUpload(inp.id.slice(5), inp.files[0]);
+});
+document.addEventListener('submit', e => {
+  const f = e.target; const kind = f.dataset.form; if(!kind) return; e.preventDefault();
+  if(kind==='student-signin'){ signInWithStudentNo(f.studentNo.value); return; }
+  if(kind==='appeal'){
+    if(!currentUser()) return openSignIn();
+    const app = latestApp(SESSION.email);
+    if(!app || app.status !== 'rejected') return toast('There is nothing to appeal.','err');
+    if(app.appeal) return toast('You have already used your one appeal.','err');
+    app.appeal = { text: f.text.value.trim(), at: new Date().toISOString() };
+    app.appealStatus = 'pending';
+    saveDB();
+    toast('Appeal submitted. We will reply by email.','ok');
+    render();
+    return;
+  }
+  if(kind==='demo-signin'){
+    const email = f.email.value.trim().toLowerCase(); const name = f.name.value.trim();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast('Enter a valid email address.','err');
+    signIn({ email, name:name||email.split('@')[0], picture:'' }); return;
+  }
+  if(kind==='apply'){
+    if(!currentUser()) return openSignIn();
+    if(!f.consent.checked) return toast('Please tick the confirmation box.','err');
+    const children = [...document.querySelectorAll('#children [data-child]')].map(b=>({
+      id: uid(),
+      name: b.querySelector('[name=childName]').value.trim(),
+      dob: b.querySelector('[name=childDob]').value,
+      gender: b.querySelector('[name=childGender]').value,
+      program: b.querySelector('[name=childProgram]').value,
+      medical: b.querySelector('[name=childMedical]').value.trim(),
+      studentNo: null
+    })).filter(c=>c.name);
+    if(!children.length) return toast('Please add at least one child.','err');
+    DB.apps.push({
+      id: uid(), email: SESSION.email,
+      parentName: f.parentName.value.trim(), phone: f.phone.value.trim(), altPhone: f.altPhone.value.trim(), relation: f.relation.value,
+      address:{ line1:f.line1.value.trim(), suburb:f.suburb.value.trim(), city:f.city.value.trim(), province:f.province.value, postal:f.postal.value.trim() },
+      children,
+      emergency:{ name:f.emName.value.trim(), phone:f.emPhone.value.trim() },
+      status:'pending', submittedAt:new Date().toISOString(), reviewedAt:null, reviewNote:''
+    });
+    saveDB(); toast('Application submitted for approval.','ok'); go('documents'); return;
+  }
+});
+
+document.getElementById('yr').textContent = new Date().getFullYear();
+window.addEventListener('hashchange', () => {
+  const r = (location.hash||'#home').slice(1);
+  route = ['home','programs','fees','apply','documents','dashboard','messages'].includes(r) ? r : 'home';
+  render();
+});
+document.getElementById('modal').addEventListener('click', e => { if(e.target.id==='modal') closeModal(); });
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeModal(); });
+
+/* keep this tab in sync when admin.html changes data in another tab */
+window.addEventListener('storage', e => {
+  if(e.key !== KEY && e.key !== SKEY) return;
+  DB = loadDB();
+  try{ SESSION = JSON.parse(localStorage.getItem(SKEY) || 'null'); }catch(err){ SESSION = null; }
+  render();
+});
+
+render();
+initGoogle();
+</script>
 </body>
 </html>
-
