@@ -172,17 +172,20 @@ label.f .hint{display:block;font-weight:500;color:var(--muted);font-size:12px;ma
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="lb-store.js"></script>
 <script>
 /* =====================================================================
    Light Bearers Child Care Centre — ADMIN console (admin.html)
    Approve parents, issue student numbers, search learners by name,
-   track fees. Shares the same browser storage as index.html.
+   track fees. Data lives in Supabase — see lb-store.js + config.js.
    ===================================================================== */
 
 const CONFIG = {
   centre: 'Light Bearers Child Care Centre',
-  googleClientId: '', yocoPublicKey: '',
-  adminPassword: 'lightbearers', planDays: 60, registrationFee: 350
+  yocoPublicKey: '',
+  planDays: 60, registrationFee: 350
 };
 const PROGRAMS = {
   baby:      { label:'Baby Care',            age:'3 – 18 months',       fee:2200, emoji:'🍼' },
@@ -190,20 +193,17 @@ const PROGRAMS = {
   preschool: { label:'Pre-School',           age:'3 – 5 years',         fee:1500, emoji:'🎨' },
   aftercare: { label:'Aftercare & Homework', age:'6 – 12 years',        fee:950,  emoji:'📚' }
 };
-const KEY = 'lightbearers_v1';
-
 function normalizeDB(d){
   d = (d && typeof d === 'object') ? d : {};
   d.users = d.users || {}; d.apps = d.apps || []; d.docs = d.docs || {};
   d.invoices = d.invoices || []; d.settings = d.settings || {};
   d.messages = d.messages || []; d.outbox = d.outbox || []; d.read = d.read || {};
+  d.profiles = d.profiles || [];
   return d;
 }
-function loadDB(){ try{ return normalizeDB(JSON.parse(localStorage.getItem(KEY))); }catch(e){ return normalizeDB({}); } }
-function saveDB(){ try{ localStorage.setItem(KEY, JSON.stringify(DB)); }catch(e){ toast('Storage full — export and reset.','err'); } }
-let DB = loadDB();
+let DB = normalizeDB({});
+function applyDB(){ DB = normalizeDB(LB.db); }
 
-let ADMIN = sessionStorage.getItem('lb_admin') === '1';
 let tab = 'students';
 let query = '';
 let statusFilter = 'all';
@@ -234,38 +234,14 @@ function allStudents(){
   })));
   return out;
 }
-function nextStudentNo(){
-  DB.settings.seq = Number(DB.settings.seq) || 1000;
-  const y = String(new Date().getFullYear()).slice(-2);
-  const used = new Set(allStudents().map(s => s.studentNo).filter(Boolean));
-  let no;
-  do { DB.settings.seq++; no = 'LB' + y + '-' + String(DB.settings.seq).padStart(4,'0'); } while(used.has(no));
-  return no;
-}
-function issueNumbers(app){
-  let issued = [];
-  (app.children||[]).forEach(ch => {
-    if(!ch.studentNo){ ch.studentNo = nextStudentNo(); issued.push(ch.name + ' → ' + ch.studentNo); }
-  });
-  if(issued.length) saveDB();
-  return issued;
-}
 function childBalance(childId){
   return DB.invoices.filter(i => i.childId === childId).reduce((s,i)=> s + (i.amount - i.paid), 0);
 }
 function ensureInvoices(app){
   if(app.status !== 'approved') return;
   const period = new Date().toISOString().slice(0,7);
-  let added = false;
-  app.children.forEach(ch => {
-    if(!DB.invoices.some(i => i.childId === ch.id && i.period === period)){
-      const prog = PROGRAMS[ch.program] || PROGRAMS.preschool;
-      DB.invoices.push({ id:uid(), email:app.email, childId:ch.id, childName:ch.name, program:ch.program, period,
-        amount:prog.fee, paid:0, status:'unpaid', plan:false, dueDate:null, payments:[], createdAt:new Date().toISOString() });
-      added = true;
-    }
-  });
-  if(added) saveDB();
+  const missing = app.children.some(ch => !DB.invoices.some(i => i.childId === ch.id && i.period === period));
+  if(missing) LB.ensureInvoicesFor(app.id).catch(function(){});
 }
 
 /* ---------------- announcements + email ---------------- */
@@ -275,36 +251,27 @@ const MSG_CATS = {
   farewell:{ label:'Farewell', ico:'👋' }
 };
 async function sendEmail(o){
-  const rec = { id:uid(), to:o.to, subject:o.subject, body:o.body, at:new Date().toISOString(), status:'demo', provider:'demo' };
-  const svc = setting('emailjsService'), tpl = setting('emailjsTemplate'), pk = setting('emailjsPublicKey');
-  if(svc && tpl && pk){
-    try{
-      const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
-        method:'POST', headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ service_id:svc, template_id:tpl, user_id:pk, template_params:{ to_email:o.to, subject:o.subject, message:o.body, centre:CONFIG.centre } })
-      });
-      rec.status = res.ok ? 'sent' : 'failed'; rec.provider = 'emailjs';
-    }catch(e){ rec.status = 'failed'; rec.provider = 'emailjs'; }
-  }
-  DB.outbox.unshift(rec); saveDB();
-  return rec;
+  return LB.sendEmail(o);
 }
-function emailApproved(app){
-  const lines = app.children.map(c => '• ' + c.name + ' — student number ' + (c.studentNo || '')).join('\n');
-  return sendEmail({
+function emailApprovedBody(app, issued, reinstated){
+  const lines = (app.children || []).map(c => '• ' + c.name + ' — student number ' + (c.studentNo || '')).join('\n');
+  return {
     to: app.email,
-    subject: 'Enrolment approved — welcome to ' + CONFIG.centre,
-    body: 'Hi ' + app.parentName + ',\n\nGreat news! Your enrolment at ' + CONFIG.centre + ' has been APPROVED.\n\n' + lines +
-      '\n\nYour parent portal is now active. Log in with your student number to pay fees and read centre notices (trips, menu changes, parties and more).\n\nKind regards,\n' + CONFIG.centre
-  });
+    subject: (reinstated ? 'Enrolment reinstated — welcome back to ' : 'Enrolment approved — welcome to ') + CONFIG.centre,
+    body: 'Hi ' + app.parentName + ',\n\n' +
+      (reinstated ? 'Good news — your enrolment has been REINSTATED.' : 'Great news! Your enrolment at ' + CONFIG.centre + ' has been APPROVED.') +
+      '\n\n' + lines +
+      '\n\nYour parent portal is active. Sign in with your student number to pay fees and read centre notices (trips, menu changes, parties and more).\n\nKind regards,\n' + CONFIG.centre
+  };
 }
-function emailRejected(app, note){
-  return sendEmail({
+function emailRejectedBody(app, note){
+  return {
     to: app.email,
     subject: 'Update on your enrolment application',
     body: 'Hi ' + app.parentName + ',\n\nThank you for applying to ' + CONFIG.centre + '. Unfortunately we could not approve your application at this time.\n\n' +
-      (note ? 'Reason: ' + note + '\n\n' : '') + 'You are welcome to correct your details and apply again, or contact the office.\n\nKind regards,\n' + CONFIG.centre
-  });
+      (note ? 'Reason: ' + note + '\n\n' : '') +
+      'You may submit one appeal from your parent portal, or contact the office directly.\n\nKind regards,\n' + CONFIG.centre
+  };
 }
 function refreshTarget(){
   const aud = document.getElementById('audience'), t = document.getElementById('target'), wrap = document.getElementById('targetWrap');
@@ -321,7 +288,8 @@ function refreshTarget(){
 
 /* =================== VIEWS =================== */
 function render(){
-  if(!ADMIN){ renderGate(); return; }
+  if(!LB.user()){ renderGate(); return; }
+  if(!LB.isAdmin()){ renderNoAccess(); return; }
   document.getElementById('app').innerHTML = shell();
   if(tab === 'messages') refreshTarget();
 }
@@ -332,12 +300,26 @@ function renderGate(){
       <div class="mark"><svg viewBox="0 0 24 24" width="30" height="30" fill="none"><circle cx="12" cy="9" r="4" fill="#ffd166"/><path d="M4 20c1.6-4.2 4.7-6.5 8-6.5s6.4 2.3 8 6.5z" fill="#fff"/></svg></div>
       <h1>Admin console</h1>
       <p>${esc(CONFIG.centre)} · staff only</p>
-      <form data-form="unlock">
-        <label class="f">Admin password<input type="password" name="pw" placeholder="Enter password" required autocomplete="current-password"></label>
-        <button class="btn navy block" style="margin-top:16px" type="submit">Unlock</button>
+      <button class="btn navy block" style="margin-top:14px" data-action="google">Continue with Google</button>
+      <form data-form="staff-signin" style="margin-top:16px">
+        <label class="f">Staff email<input type="email" name="email" placeholder="you@example.com" required autocomplete="email"></label>
+        <label class="f" style="margin-top:12px">Password<input type="password" name="password" required autocomplete="current-password"></label>
+        <button class="btn navy block" style="margin-top:16px" type="submit">Sign in</button>
       </form>
-      <div class="note">Default password is <b>lightbearers</b>. Change it in Settings once you're in.</div>
-      <div class="note">This is a front-end demo: data is stored in this browser and shared with <b>index.html</b>.</div>
+      <div class="note">Only accounts with the <b>staff</b> role can open this console. The README shows the one-line SQL that makes you staff.</div>
+    </div>
+  </div>`;
+}
+function renderNoAccess(){
+  const u = LB.user();
+  document.getElementById('app').innerHTML = `
+  <div class="gate">
+    <div class="box">
+      <div class="mark">🔒</div>
+      <h1>No staff access</h1>
+      <p>You are signed in as <b>${esc(u.email)}</b>, but this account is not staff.</p>
+      <button class="btn navy block" style="margin-top:16px" data-action="lock">Sign out</button>
+      <div class="note">An existing staff member can grant access in <b>Settings → Staff access</b>, or run the SQL in the README.</div>
     </div>
   </div>`;
 }
@@ -352,7 +334,7 @@ function shell(){
       </div>
       <div class="spacer"></div>
       <span class="badge">🔒 Signed in as staff</span>
-      <button class="btn ghost sm" data-action="lock">Lock</button>
+      <button class="btn ghost sm" data-action="lock">Sign out</button>
     </div>
   </header>
   <main>
@@ -622,25 +604,33 @@ function viewSettings(){
       <div class="grid2">
         <label class="f">Once-off registration fee (R)<input type="number" name="registrationFee" min="0" value="${setting('registrationFee')}"></label>
         <label class="f">Days to settle the other half<input type="number" name="planDays" min="1" value="${setting('planDays')}"></label>
-        <label class="f full">Google OAuth Client ID <span class="hint" style="display:inline">— enables real “Sign in with Google” on index.html</span><input name="googleClientId" placeholder="1234-abc.apps.googleusercontent.com" value="${esc(setting('googleClientId'))}"></label>
         <label class="f full">Yoco public key<input name="yocoPublicKey" placeholder="pk_live_..." value="${esc(setting('yocoPublicKey'))}"></label>
         <label class="f full">EmailJS service ID <span class="hint" style="display:inline">— to really send approval emails</span><input name="emailjsService" placeholder="service_xxxxxxx" value="${esc(setting('emailjsService'))}"></label>
         <label class="f">EmailJS template ID<input name="emailjsTemplate" placeholder="template_xxxxxxx" value="${esc(setting('emailjsTemplate'))}"></label>
         <label class="f">EmailJS public key<input name="emailjsPublicKey" placeholder="AbCdEfGh..." value="${esc(setting('emailjsPublicKey'))}"></label>
-        <label class="f full">Admin password<input name="adminPassword" value="${esc(setting('adminPassword'))}"></label>
       </div>
       <button class="btn p" style="margin-top:18px" type="submit">Save settings</button>
     </form>
     <hr class="hr">
+    <h3 style="font-family:Nunito;font-size:17px;margin-bottom:6px">Staff access</h3>
+    <p style="color:var(--muted);font-size:13.5px;margin-bottom:12px">Everyone who signs in appears here. Give a colleague the <b>staff</b> role to let them open this console.</p>
+    <div class="stu-list" style="margin-bottom:18px">
+      ${(DB.profiles||[]).map(p=>`
+        <div class="stu-row" style="cursor:default">
+          <div class="avatar">${esc(initials(p.name||p.email))}</div>
+          <div class="info"><b>${esc(p.name||p.email)}</b><span>${esc(p.email)}</span></div>
+          <span class="tag ${p.role==='admin'?'approved':'pending'}">${p.role==='admin'?'staff':'parent'}</span>
+          <button class="btn ${p.role==='admin'?'ghost':'p'} sm" data-action="set-role" data-id="${esc(p.id)}" data-role="${p.role==='admin'?'parent':'admin'}">${p.role==='admin'?'Revoke staff':'Make staff'}</button>
+        </div>`).join('') || '<div class="note">No accounts yet.</div>'}
+    </div>
+    <hr class="hr">
     <div class="row-b">
       <button class="btn ghost sm" data-action="seed">Add sample application</button>
       <button class="btn ghost sm" data-action="export">⬇️ Export data (JSON)</button>
-      <button class="btn ghost sm" data-action="import">⬆️ Import data</button>
       <button class="btn danger sm" data-action="reset">Reset all demo data</button>
-      <input type="file" id="importFile" accept="application/json" style="display:none">
     </div>
-    <div class="note"><b>Student numbers</b> are issued automatically on approval in the form <span class="mono">LB26-1001</span>, <span class="mono">LB26-1002</span>, … The sequence is stored in settings and never repeats.</div>
-    <div class="note">Everything lives in this browser's storage. <b>index.html</b> and <b>admin.html</b> must sit in the same folder (same origin) to share it. Opening both by double-clicking usually works; if not, serve the folder with any local web server. Export/Import moves the data between browsers.</div>
+    <div class="note"><b>Student numbers</b> are issued automatically on approval in the form <span class="mono">LB26-1001</span>, <span class="mono">LB26-1002</span>, … The sequence lives in the database and never repeats.</div>
+    <div class="note">Everything is stored in your Supabase project, so <b>index.html</b> and <b>admin.html</b> share the same data on every device. “Reset all demo data” clears applications, documents, invoices and messages — it does not delete user accounts.</div>
   </div>`;
 }
 
@@ -708,37 +698,21 @@ document.addEventListener('click', e => {
     case 'clear-q': query = ''; render(); focusSearch(); break;
     case 'open-student': openStudent(el.dataset.id); break;
     case 'close-modal': closeModal(); break;
-    case 'lock': ADMIN = false; sessionStorage.removeItem('lb_admin'); toast('Locked.'); render(); break;
+    case 'google': doGoogle(); break;
+    case 'lock': LB.signOut().then(()=>{ applyDB(); toast('Signed out.'); render(); }).catch(err=>toast(err.message,'err')); break;
     case 'approve': approveApp(el.dataset.id); break;
     case 'reject': rejectApp(el.dataset.id); break;
-    case 'reinstate': reinstateApp(el.dataset.id); break;
     case 'undismiss': reinstateApp(el.dataset.id); break;
     case 'uphold': upholdApp(el.dataset.id); break;
-    case 'del-msg': DB.messages = DB.messages.filter(m=>m.id!==el.dataset.id); saveDB(); toast('Announcement deleted.'); render(); break;
+    case 'set-role': setRole(el.dataset.id, el.dataset.role); break;
+    case 'del-msg': delMsg(el.dataset.id); break;
     case 'seed-msgs': seedMsgs(); break;
-    case 'issue-missing': {
-      const a = DB.apps.find(x=>x.id===el.dataset.id); if(!a) break;
-      const issued = issueNumbers(a); ensureInvoices(a);
-      toast(issued.length ? 'Issued: ' + issued.join(', ') : 'All numbers already issued.', 'ok'); render();
-      break;
-    }
-    case 'issue-one': {
-      const s = allStudents().find(x=>x.child.id===el.dataset.id); if(!s) break;
-      s.child.studentNo = nextStudentNo(); saveDB();
-      toast('Student number ' + s.child.studentNo + ' issued.', 'ok'); openStudent(s.child.id); render();
-      break;
-    }
+    case 'issue-missing': issueMissing(el.dataset.id); break;
+    case 'issue-one': issueOne(el.dataset.id); break;
     case 'print-student': window.print(); break;
     case 'seed': seed(); break;
     case 'export': exportData(); break;
-    case 'import': document.getElementById('importFile').click(); break;
-    case 'reset':
-      if(confirm('Erase ALL demo data (accounts, applications, documents, invoices, student numbers)? This cannot be undone.')){
-        localStorage.removeItem(KEY); localStorage.removeItem('lightbearers_session');
-        DB = { users:{}, apps:[], docs:{}, invoices:[], settings:{} };
-        toast('All demo data reset.'); render();
-      }
-      break;
+    case 'reset': resetAll(); break;
   }
 });
 document.addEventListener('input', e => {
@@ -746,45 +720,52 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if(e.target.id === 'audience') refreshTarget();
-  if(e.target.id === 'importFile' && e.target.files[0]){
-    const r = new FileReader();
-    r.onload = () => {
-      try{
-        const data = JSON.parse(r.result);
-        if(!data || typeof data !== 'object') throw 0;
-        DB = Object.assign({ users:{}, apps:[], docs:{}, invoices:[], settings:{} }, data);
-        saveDB(); toast('Data imported.','ok'); render();
-      }catch(err){ toast('That file is not valid Light Bearers data.','err'); }
-    };
-    r.readAsText(e.target.files[0]);
-  }
 });
-document.addEventListener('submit', e => {
+document.addEventListener('submit', async e => {
   const f = e.target; const kind = f.dataset.form; if(!kind) return; e.preventDefault();
-  if(kind === 'unlock'){
-    if(f.pw.value === setting('adminPassword')){ ADMIN = true; sessionStorage.setItem('lb_admin','1'); toast('Welcome back.','ok'); render(); }
-    else toast('Wrong password.','err');
+  if(kind === 'staff-signin'){
+    const email = f.email.value.trim().toLowerCase();
+    const pw = f.password.value;
+    const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+    try{
+      await LB.signInEmail(email, pw);
+      await LB.load(); applyDB();
+      if(!LB.isAdmin()) toast('Signed in, but this account is not staff.','err');
+      else toast('Welcome back.','ok');
+      render();
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
     return;
   }
   if(kind === 'message'){
     const aud = f.audience.value;
     const target = aud === 'all' ? null : (f.target ? f.target.value : null);
     if(aud !== 'all' && !target) return toast('Choose a target first.','err');
-    DB.messages.unshift({ id:uid(), title:f.title.value.trim(), body:f.body.value.trim(), category:f.category.value,
-      audience:aud, target, important:f.important.checked, at:new Date().toISOString(), author:'Front office' });
-    saveDB(); toast('Announcement published — parents can see it now.','ok'); render();
+    const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+    try{
+      await LB.publishMessage({
+        title: f.title.value.trim(), body: f.body.value.trim(), category: f.category.value,
+        audience: aud, target: target, important: f.important.checked, author: 'Front office'
+      });
+      toast('Announcement published — parents can see it now.','ok');
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
     return;
   }
   if(kind === 'settings'){
-    DB.settings.registrationFee = Number(f.registrationFee.value) || 0;
-    DB.settings.planDays = Math.max(1, Number(f.planDays.value) || 60);
-    DB.settings.googleClientId = f.googleClientId.value.trim();
-    DB.settings.yocoPublicKey = f.yocoPublicKey.value.trim();
-    DB.settings.emailjsService = f.emailjsService.value.trim();
-    DB.settings.emailjsTemplate = f.emailjsTemplate.value.trim();
-    DB.settings.emailjsPublicKey = f.emailjsPublicKey.value.trim();
-    DB.settings.adminPassword = f.adminPassword.value || CONFIG.adminPassword;
-    saveDB(); toast('Settings saved.','ok');
+    const btn = f.querySelector('button[type=submit]'); if(btn) btn.disabled = true;
+    try{
+      await LB.saveSettings({
+        registrationFee: Number(f.registrationFee.value) || 0,
+        planDays: Math.max(1, Number(f.planDays.value) || 60),
+        yocoPublicKey: f.yocoPublicKey.value.trim(),
+        emailjsService: f.emailjsService.value.trim(),
+        emailjsTemplate: f.emailjsTemplate.value.trim(),
+        emailjsPublicKey: f.emailjsPublicKey.value.trim()
+      });
+      toast('Settings saved.','ok');
+    }catch(err){ toast(err.message,'err'); }
+    finally{ if(btn) btn.disabled = false; }
     return;
   }
 });
@@ -804,78 +785,106 @@ function focusSearch(pos){
 }
 
 /* ---------- actions ---------- */
-function addWelcomeMessage(a){
-  DB.messages.unshift({
-    id:uid(), title:'Enrolment approved 🎉',
-    body:'Welcome to ' + CONFIG.centre + '! ' + a.children.map(c => c.name + ' — student number ' + (c.studentNo||'')).join('\n') +
-      '\n\nLog in any time with your student number to pay fees and read notices.',
-    category:'general', audience:'student', target:a.children[0] ? a.children[0].id : null,
-    important:true, at:new Date().toISOString(), author:'Front office'
-  });
+async function doGoogle(){
+  try{ await LB.signInGoogle(); }
+  catch(e){ toast(e.message,'err'); }
 }
-function approveApp(id){
-  const a = DB.apps.find(x => x.id === id); if(!a) return;
-  a.status = 'approved'; a.reviewedAt = new Date().toISOString(); a.reviewNote = '';
-  saveDB();
-  const issued = issueNumbers(a);
-  ensureInvoices(a);
-  addWelcomeMessage(a); saveDB();
-  emailApproved(a);
-  toast('Approved · ' + (issued.length ? 'student no. ' + issued.join(', ') : 'numbers already issued') + ' · email sent to ' + a.email, 'ok');
-  render();
+function appById(id){ return DB.apps.find(x => x.id === id); }
+async function addWelcomeMessage(app){
+  const kids = (app.children||[]).map(c => c.name + (c.studentNo ? ' — student number ' + c.studentNo : '')).join('\n');
+  try{
+    await LB.publishMessage({
+      title: 'Enrolment approved 🎉',
+      body: 'Welcome to ' + CONFIG.centre + '! ' + kids +
+        '\n\nSign in any time with your student number to pay fees and read notices.',
+      category: 'general', audience: 'student', target: (app.children[0]||{}).id || null,
+      important: true, author: 'Front office'
+    });
+  }catch(e){ /* the welcome note is a nice-to-have */ }
 }
-function rejectApp(id){
-  const a = DB.apps.find(x => x.id === id); if(!a) return;
+async function approveApp(id){
+  const a = appById(id); if(!a) return;
+  try{
+    const issued = await LB.approve(id, false);
+    applyDB();
+    const fresh = appById(id) || a;
+    await addWelcomeMessage(fresh);
+    await sendEmail(emailApprovedBody(fresh, issued));
+    toast('Approved · ' + (issued.length ? 'student no. ' + issued.join(', ') : 'numbers already issued') + ' · email logged for ' + fresh.email, 'ok');
+  }catch(e){ toast(e.message,'err'); }
+  applyDB(); render();
+}
+async function rejectApp(id){
+  const a = appById(id); if(!a) return;
   const noteEl = document.querySelector(`[data-note="${id}"]`);
-  a.status = 'rejected'; a.reviewedAt = new Date().toISOString(); a.reviewNote = noteEl ? noteEl.value.trim() : '';
-  a.appeal = null; a.appealStatus = 'none';
-  saveDB(); emailRejected(a, a.reviewNote);
-  toast('Dismissed · email sent to ' + a.email + ' · parent may appeal once.', 'ok'); render();
+  const note = noteEl ? noteEl.value.trim() : '';
+  try{
+    await LB.dismiss(id, note);
+    applyDB();
+    const fresh = appById(id) || a;
+    await sendEmail(emailRejectedBody(fresh, note));
+    toast('Dismissed · email logged for ' + fresh.email + ' · parent may appeal once.','ok');
+  }catch(e){ toast(e.message,'err'); }
+  applyDB(); render();
 }
-function reinstateApp(id){
-  const a = DB.apps.find(x => x.id === id); if(!a) return;
-  a.status = 'approved'; a.reviewedAt = new Date().toISOString(); a.reviewNote = ''; a.appealStatus = 'accepted';
-  saveDB();
-  const issued = issueNumbers(a);
-  ensureInvoices(a);
-  addWelcomeMessage(a); saveDB();
-  emailApproved(a);
-  toast('Reinstated · ' + (issued.length ? 'student no. ' + issued.join(', ') : 'numbers issued') + ' · email sent.', 'ok');
-  render();
+async function reinstateApp(id){
+  const a = appById(id); if(!a) return;
+  try{
+    const issued = await LB.approve(id, false);
+    applyDB();
+    const fresh = appById(id) || a;
+    await addWelcomeMessage(fresh);
+    await sendEmail(emailApprovedBody(fresh, issued, true));
+    toast('Reinstated · ' + (issued.length ? 'student no. ' + issued.join(', ') : 'numbers issued') + ' · email logged.','ok');
+  }catch(e){ toast(e.message,'err'); }
+  applyDB(); render();
 }
-function upholdApp(id){
-  const a = DB.apps.find(x => x.id === id); if(!a) return;
-  a.appealStatus = 'declined'; saveDB();
-  sendEmail({
-    to:a.email, subject:'Your appeal — final decision',
-    body:'Hi ' + a.parentName + ',\n\nWe have carefully reviewed your appeal. Unfortunately the decision to dismiss your application stands, and this decision is final.\n\nYou are welcome to contact the office directly to discuss.\n\nKind regards,\n' + CONFIG.centre
-  });
-  toast('Dismissal upheld · email sent.','ok'); render();
+async function upholdApp(id){
+  const a = appById(id); if(!a) return;
+  try{
+    await LB.decideAppeal(id, false);
+    applyDB();
+    await sendEmail({
+      to: a.email, subject: 'Your appeal — final decision',
+      body: 'Hi ' + a.parentName + ',\n\nWe have carefully reviewed your appeal. Unfortunately the decision to dismiss your application stands, and this decision is final.\n\nYou are welcome to contact the office directly to discuss.\n\nKind regards,\n' + CONFIG.centre
+    });
+    toast('Dismissal upheld · email logged.','ok');
+  }catch(e){ toast(e.message,'err'); }
+  applyDB(); render();
 }
-function seedMsgs(){
-  const now = Date.now();
-  const add = (o) => DB.messages.push(Object.assign({ id:uid(), audience:'all', target:null, important:false, author:'Front office', at:new Date(now).toISOString() }, o));
-  add({ title:'School trip to the Zoo 🦁', category:'trip', important:true, at:new Date(now - 3600e3).toISOString(),
-        body:'Our Pre-School and Toddler groups are going to the Zoo on Friday. Please pack a hat, a water bottle and sunscreen. Permission slips are at the office. Bus leaves at 08:30 sharp.' });
-  add({ title:'Menu change this week', category:'food', at:new Date(now - 26*3600e3).toISOString(),
-        body:'Thursday lunch will be macaroni and cheese with a side salad instead of rice and mince. Fruit is still served at 15:00.' });
-  add({ title:"Lerato's birthday party 🎂", category:'party', at:new Date(now - 50*3600e3).toISOString(),
-        body:'We are celebrating a birthday this month! Cupcakes and juice will be provided by the centre. If your child has allergies, please let us know.' });
-  add({ title:'Farewell for Teacher Anne 👋', category:'farewell', at:new Date(now - 80*3600e3).toISOString(),
-        body:'After 9 wonderful years, Teacher Anne is moving on. Join us for a small farewell tea on the last Friday of the month at 15:30. Children may bring a card.' });
-  saveDB(); toast('Sample announcements loaded.','ok'); render();
+async function setRole(userId, role){
+  try{ await LB.setRole(userId, role); applyDB(); toast('Access updated.','ok'); render(); }
+  catch(e){ toast(e.message,'err'); }
 }
-function seed(){
-  const email = 'demo.parent@gmail.com';
-  DB.users[email] = { email, name:'Nomsa Khumalo', picture:'', createdAt:new Date().toISOString() };
-  DB.apps.push({
-    id: uid(), email, parentName:'Nomsa Khumalo', phone:'072 445 1180', altPhone:'', relation:'Mother',
-    address:{ line1:'18 Marula Street', suburb:'Extension 4', city:'Midrand', province:'Gauteng', postal:'1685' },
-    children:[{ id:uid(), name:'Lerato Khumalo', dob:'2023-04-12', gender:'Girl', program:'toddler', medical:'Mild peanut allergy', studentNo:null }],
-    emergency:{ name:'Sipho Khumalo', phone:'083 220 7710' },
-    status:'pending', submittedAt:new Date().toISOString(), reviewedAt:null, reviewNote:''
-  });
-  saveDB(); toast('Sample application added.','ok'); render();
+async function delMsg(id){
+  try{ await LB.deleteMessage(id); applyDB(); toast('Announcement deleted.'); render(); }
+  catch(e){ toast(e.message,'err'); }
+}
+async function issueMissing(id){
+  try{
+    const issued = await LB.approve(id, false);
+    applyDB();
+    toast(issued.length ? 'Issued: ' + issued.join(', ') : 'All numbers already issued.', 'ok');
+  }catch(e){ toast(e.message,'err'); }
+  applyDB(); render();
+}
+async function issueOne(childId){
+  const s = allStudents().find(x => x.child.id === childId); if(!s) return;
+  try{
+    await LB.approve(s.app.id, false);
+    applyDB();
+    toast('Student number issued.','ok');
+    openStudent(childId);
+  }catch(e){ toast(e.message,'err'); }
+  applyDB(); render();
+}
+async function seedMsgs(){
+  try{ await LB.seedMessages(); applyDB(); toast('Sample announcements loaded.','ok'); render(); }
+  catch(e){ toast(e.message,'err'); }
+}
+async function seed(){
+  try{ await LB.seedSample(); applyDB(); toast('Sample application added.','ok'); render(); }
+  catch(e){ toast(e.message,'err'); }
 }
 function exportData(){
   const blob = new Blob([JSON.stringify(DB, null, 2)], { type:'application/json' });
@@ -886,14 +895,25 @@ function exportData(){
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
   toast('Data exported.','ok');
 }
+async function resetAll(){
+  if(!confirm('Erase ALL applications, documents, invoices, student numbers and messages? User accounts are kept. This cannot be undone.')) return;
+  try{ await LB.resetAll(); applyDB(); toast('All demo data reset.'); render(); }
+  catch(e){ toast(e.message,'err'); }
+}
 
 document.getElementById('modal').addEventListener('click', e => { if(e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeModal(); });
 
-/* keep this tab in sync when index.html changes data in another tab */
-window.addEventListener('storage', e => { if(e.key === KEY){ DB = loadDB(); render(); } });
+/* live sync — any device or tab that changes data pushes an update here */
+LB.onChange(function(){ applyDB(); render(); });
 
-render();
+(async function boot(){
+  await LB.ready;
+  applyDB();
+  render();
+  if(!LB.configured) toast('Backend not connected — add your Supabase keys to config.js.', 'err');
+  else if(LB.state && LB.state.loadError) toast(LB.state.loadError, 'err');
+})();
 </script>
 </body>
 </html>
